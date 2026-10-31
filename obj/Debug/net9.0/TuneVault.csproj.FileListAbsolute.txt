@@ -77,3 +77,5 @@
 /opt/lampp/htdocs/TuneVault/obj/Debug/net9.0/TuneVault.genruntimeconfig.cache
 /opt/lampp/htdocs/TuneVault/obj/Debug/net9.0/ref/TuneVault.dll
 /opt/lampp/htdocs/TuneVault/bin/Debug/net9.0/CommunityToolkit.Mvvm.dll
+/opt/lampp/htdocs/TuneVault/obj/Debug/net9.0/TuneVault.sourcelink.json
+/opt/lampp/htdocs/TuneVault/bin/Debug/net9.0/TagLibSharp.dll

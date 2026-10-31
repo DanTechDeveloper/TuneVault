@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:models="using:TuneVault.Models"
+             xmlns:views="using:TuneVault.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="500"
+             d:DesignHeight="500"
+             x:Class="TuneVault.Views.AllSongsView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <Grid ColumnDefinitions="*,Auto"
+              Margin="0,0,0,12">
+            <StackPanel Spacing="2">
+                <TextBlock Text="Music Library"
+                           FontSize="20"
+                           FontWeight="SemiBold"/>
+
+                <TextBlock Text="{Binding Tracks.Count, StringFormat='{}{0} tracks'}"
+                           FontSize="12"
+                           Opacity="0.6"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding HasTracks}">
+                <Button Content="▶ Play"
+                        Command="{Binding PlayTrackCommand}"
+                        Padding="16,8"
+                        FontWeight="SemiBold"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Empty State Placeholder -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding !HasTracks}">
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="♫"
+                           FontSize="48"
+                           HorizontalAlignment="Center"
+                           Opacity="0.4"/>
+
+                <TextBlock Text="Your library is empty"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock Text="Add individual audio files or import an entire folder with songs."
+                           FontSize="13"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"/>
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0">
+                    <Button Content="＋ Add File(s)"
+                            Command="{Binding AddFilesCommand}"
+                            Padding="14,8"/>
+                    <Button Content="📁 Add Folder"
+                            Command="{Binding AddFolderCommand}"
+                            Padding="14,8"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Track Listing -->
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Tracks}"
+                 SelectedItem="{Binding SelectedTrack, Mode=TwoWay}"
+                 IsVisible="{Binding HasTracks}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="models:Track">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                          ColumnSpacing="12"
+                          Margin="4,6">
+                        <Border Width="38"
+                                Height="38"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                Background="#2A2A3E"
+                                VerticalAlignment="Center">
+                            <Panel>
+                                <TextBlock Text="♫"
+                                           FontSize="16"
+                                           Foreground="#8888A8"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !HasCoverArt}"/>
+                                <Image Source="{Binding CoverArt}"
+                                       Stretch="UniformToFill"
+                                       IsVisible="{Binding HasCoverArt}"/>
+                            </Panel>
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
+
+                            <TextBlock Text="{Binding Artist}"
+                                       FontSize="12"
+                                       Opacity="0.65"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2"
+                                Content="▶"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).PlayTrackCommand}"
+                                CommandParameter="{Binding .}"
+                                ToolTip.Tip="Play track"/>
+
+                        <TextBlock Grid.Column="3"
+                                   Text="{Binding DurationDisplay}"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Opacity="0.65"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

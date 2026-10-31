@@ -29,5 +29,17 @@ build_property.EnableCodeStyleSeverity =
 [/opt/lampp/htdocs/TuneVault/App.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
+[/opt/lampp/htdocs/TuneVault/Views/AlbumsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/opt/lampp/htdocs/TuneVault/Views/AllSongsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/opt/lampp/htdocs/TuneVault/Views/ArtistsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/opt/lampp/htdocs/TuneVault/Views/GenresView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
 [/opt/lampp/htdocs/TuneVault/Views/MainWindow.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

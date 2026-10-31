@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:TuneVault.ViewModels"
+        xmlns:views="using:TuneVault.Views"
         xmlns:models="using:TuneVault.Models"
         mc:Ignorable="d"
         d:DesignWidth="960"
@@ -16,7 +17,34 @@
         MinWidth="760"
         MinHeight="480">
 
-    <DockPanel Margin="24">
+    <Window.Styles>
+        <Style Selector="Button.nav-btn">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Background" Value="#292943"/>
+            <Setter Property="Foreground" Value="#B8B8CC"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-btn:pointerover">
+            <Setter Property="Background" Value="#38385A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.nav-btn.active">
+            <Setter Property="Background" Value="#292943"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid>
+        <DockPanel Margin="24">
 
         <!-- Header -->
         <Grid DockPanel.Dock="Top"
@@ -33,11 +61,19 @@
                            Opacity="0.65"/>
             </StackPanel>
 
-            <Button Grid.Column="1"
-                    Content="＋ Add Files"
-                    Command="{Binding AddFilesCommand}"
-                    VerticalAlignment="Center"
-                    Padding="16,10"/>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center">
+
+                <Button Content="＋ Add File(s)"
+                        Command="{Binding AddFilesCommand}"
+                        Padding="14,10"/>
+
+                <Button Content="📁 Add Folder"
+                        Command="{Binding AddFolderCommand}"
+                        Padding="14,10"/>
+            </StackPanel>
         </Grid>
 
         <!-- Status Bar -->
@@ -56,7 +92,7 @@
               ColumnSpacing="16">
 
           <!-- LEFT SIDEBAR -->
-<Border Grid.Column="0"
+    <Border Grid.Column="0"
         Padding="11"
         CornerRadius="10"
         Background="#FFFFFF">
@@ -69,83 +105,40 @@
                    Foreground="#8888A8"
                    Margin="8,8,0,12"/>
 
-        <!-- Selected navigation -->
-        <Button Content="♫  All Songs"
-                HorizontalContentAlignment="Left"
-                Background="#292943"
-                Foreground="#FFFFFF"
-                Padding="12,10"/>
+        <!-- Navigation buttons -->
+        <Button Classes="nav-btn"
+                Classes.active="{Binding IsAllSongsTab}"
+                Content="♫  All Songs"
+                Command="{Binding SelectTabCommand}"
+                CommandParameter="{x:Static vm:NavigationTab.AllSongs}"/>
 
-        <Button Content="▣  Albums"
-                HorizontalContentAlignment="Left"
-                Background="Transparent"
-                Foreground="#B8B8CC"
-                Padding="12,10"/>
+        <Button Classes="nav-btn"
+                Classes.active="{Binding IsAlbumsTab}"
+                Content="▣  Albums"
+                Command="{Binding SelectTabCommand}"
+                CommandParameter="{x:Static vm:NavigationTab.Albums}"/>
 
-        <Button Content="♙  Artists"
-                HorizontalContentAlignment="Left"
-                Background="Transparent"
-                Foreground="#B8B8CC"
-                Padding="12,10"/>
+        <Button Classes="nav-btn"
+                Classes.active="{Binding IsArtistsTab}"
+                Content="♙  Artists"
+                Command="{Binding SelectTabCommand}"
+                CommandParameter="{x:Static vm:NavigationTab.Artists}"/>
 
-        <Button Content="☷  Genres"
-                HorizontalContentAlignment="Left"
-                Background="Transparent"
-                Foreground="#B8B8CC"
-                Padding="12,10"/>
+        <Button Classes="nav-btn"
+                Classes.active="{Binding IsGenresTab}"
+                Content="☷  Genres"
+                Command="{Binding SelectTabCommand}"
+                CommandParameter="{x:Static vm:NavigationTab.Genres}"/>
 
     </StackPanel>
 </Border>
 
-            <!-- MUSIC LIBRARY -->
-            <Grid Grid.Column="1"
-                  RowDefinitions="Auto,*">
-
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,0,0,12">
-
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="Music Library"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"/>
-
-                        <TextBlock Text="{Binding Tracks.Count, StringFormat='{}{0} tracks'}"
-                                   FontSize="12"
-                                   Opacity="0.6"/>
-                    </StackPanel>
-
-                </Grid>
-
-                <ListBox Grid.Row="1"
-                         ItemsSource="{Binding Tracks}"
-                         SelectedItem="{Binding SelectedTrack, Mode=TwoWay}">
-
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="models:Track">
-
-                            <Grid ColumnDefinitions="*,Auto"
-                                  Margin="4,8">
-
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="{Binding Title}"
-                                               FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"/>
-
-                                    <TextBlock Text="{Binding Artist}"
-                                               FontSize="12"
-                                               Opacity="0.65"/>
-                                </StackPanel>
-
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding DurationDisplay}"
-                                           VerticalAlignment="Center"
-                                           FontSize="12"
-                                           Opacity="0.65"/>
-                            </Grid>
-
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+            <!-- MAIN CONTENT (DYNAMIC CHILDREN) -->
+            <Grid Grid.Column="1">
+                <views:AllSongsView IsVisible="{Binding IsAllSongsTab}"/>
+                <views:AlbumsView   IsVisible="{Binding IsAlbumsTab}"/>
+                <views:ArtistsView  IsVisible="{Binding IsArtistsTab}"/>
+                <views:GenresView   IsVisible="{Binding IsGenresTab}"/>
             </Grid>
 
             <!-- NOW PLAYING PANEL -->
@@ -165,9 +158,30 @@
                                        LetterSpacing="1"
                                        Opacity="0.6"/>
 
+                            <!-- Album Art -->
+                            <Border Width="180"
+                                    Height="180"
+                                    CornerRadius="10"
+                                    ClipToBounds="True"
+                                    Background="#222238"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,2,0,6">
+                                <Panel>
+                                    <TextBlock Text="♫"
+                                               FontSize="56"
+                                               Foreground="#8888A8"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding !HasNowPlayingCoverArt}"/>
+                                    <Image Source="{Binding NowPlayingCoverArt}"
+                                           Stretch="UniformToFill"
+                                           IsVisible="{Binding HasNowPlayingCoverArt}"/>
+                                </Panel>
+                            </Border>
+
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding NowPlayingTitle}"
-                                           FontSize="22"
+                                           FontSize="20"
                                            FontWeight="Bold"
                                            TextWrapping="Wrap"/>
 
@@ -244,4 +258,47 @@
         </Grid>
 
     </DockPanel>
+
+        <!-- Loading Modal Overlay -->
+        <Border Background="#80000000"
+                IsVisible="{Binding IsLoading}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Padding="32,24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MinWidth="320"
+                    MaxWidth="460">
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock Text="Importing Music"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Reading tags and decoding artwork..."
+                                   FontSize="12"
+                                   Opacity="0.65"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding LoadingProgress}"
+                                 Height="8"
+                                 CornerRadius="4"/>
+
+                    <TextBlock Text="{Binding LoadingStatusText}"
+                               FontSize="12"
+                               Opacity="0.8"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
 </Window>

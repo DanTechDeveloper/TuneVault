@@ -194,5 +194,6 @@
 /home/dan/.dotnet/packs/Microsoft.NETCore.App.Ref/9.0.22/ref/net9.0/System.Xml.XmlSerializer.dll
 /home/dan/.dotnet/packs/Microsoft.NETCore.App.Ref/9.0.22/ref/net9.0/System.Xml.XPath.dll
 /home/dan/.dotnet/packs/Microsoft.NETCore.App.Ref/9.0.22/ref/net9.0/System.Xml.XPath.XDocument.dll
+/home/dan/.nuget/packages/taglibsharp/2.3.0/lib/netstandard2.0/TagLibSharp.dll
 /home/dan/.nuget/packages/tmds.dbus.protocol/0.21.2/lib/net8.0/Tmds.DBus.Protocol.dll
 /home/dan/.dotnet/packs/Microsoft.NETCore.App.Ref/9.0.22/ref/net9.0/WindowsBase.dll

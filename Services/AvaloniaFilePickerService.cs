@@ -50,4 +50,26 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
             .Cast<string>()
             .ToArray();
     }
+
+    public async Task<string?> PickAudioFolderAsync()
+    {
+        var window = _windowProvider();
+        if (window is null)
+        {
+            return null;
+        }
+
+        var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select music folder to import",
+            AllowMultiple = false,
+        });
+
+        if (folders.Count == 0)
+        {
+            return null;
+        }
+
+        return folders[0].TryGetLocalPath();
+    }
 }

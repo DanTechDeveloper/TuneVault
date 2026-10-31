@@ -9,4 +9,7 @@ namespace TuneVault.Services;
 public interface IFilePickerService
 {
     Task<IReadOnlyList<string>> PickAudioFilesAsync();
+
+    Task<string?> PickAudioFolderAsync();
 }
+
