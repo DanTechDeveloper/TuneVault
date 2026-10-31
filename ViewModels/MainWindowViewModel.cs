@@ -60,6 +60,60 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private string _statusMessage = "Add local audio files to start your library.";
 
     [ObservableProperty]
+    private bool _showDuplicateModal;
+
+    [ObservableProperty]
+    private string _duplicateModalTitle = "Audio Already Exists";
+
+    [ObservableProperty]
+    private string _duplicateModalMessage = "";
+
+    [RelayCommand]
+    private void CloseDuplicateModal()
+    {
+        ShowDuplicateModal = false;
+    }
+
+    [ObservableProperty]
+    private bool _isEditMetadataModalOpen;
+
+    [ObservableProperty]
+    private Track? _editingTrack;
+
+    [ObservableProperty]
+    private string _editTitle = "";
+
+    [ObservableProperty]
+    private string _editArtist = "";
+
+    [ObservableProperty]
+    private string _editAlbum = "";
+
+    [ObservableProperty]
+    private string _editGenre = "";
+
+    [ObservableProperty]
+    private string _editYear = "";
+
+    [ObservableProperty]
+    private string _editFilePath = "";
+
+    [ObservableProperty]
+    private string _editDuration = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEditCoverArt))]
+    private byte[]? _editPictureData;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEditCoverArt))]
+    private Avalonia.Media.Imaging.Bitmap? _editCoverArtBitmap;
+
+    public bool HasEditCoverArt => EditCoverArtBitmap is not null;
+
+    private bool _editCoverArtChanged;
+
+    [ObservableProperty]
     private NavigationTab _currentTab = NavigationTab.AllSongs;
 
     public bool IsAllSongsTab => CurrentTab == NavigationTab.AllSongs;
@@ -261,22 +315,34 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         var pathComparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
+        var pathComparer = pathComparison == StringComparison.OrdinalIgnoreCase
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 
         var existingPaths = new HashSet<string>(
             Tracks.Where(t => t.FilePath is not null).Select(t => t.FilePath!),
-            pathComparison == StringComparison.OrdinalIgnoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            pathComparer);
 
-        var toProcess = paths.Where(p => !existingPaths.Contains(p)).ToList();
-        if (toProcess.Count == 0)
+        var uniquePaths = paths.Distinct(pathComparer).ToList();
+        var duplicates = new List<string>();
+
+        var toProcess = new List<string>();
+        foreach (var p in uniquePaths)
         {
-            StatusMessage = "Selected file(s) are already in your library.";
-            IsLoading = false;
-            return;
+            if (existingPaths.Contains(p))
+            {
+                var existingTrack = Tracks.FirstOrDefault(t => string.Equals(t.FilePath, p, pathComparison));
+                var name = existingTrack?.Title ?? Path.GetFileName(p);
+                duplicates.Add(name);
+            }
+            else
+            {
+                toProcess.Add(p);
+            }
         }
 
         var added = 0;
         var failed = 0;
-        Track? lastAdded = null;
         var total = toProcess.Count;
 
         for (var i = 0; i < total; i++)
@@ -289,17 +355,34 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             try
             {
                 var metadata = await Task.Run(() => _metadataReader.Read(path));
+                var title = metadata.Title ?? TitleFromPath(path);
+                var artist = metadata.Artist ?? "Unknown artist";
+
+                var isDuplicateMetadata = !string.IsNullOrWhiteSpace(title) &&
+                    !title.Equals("Untitled track", StringComparison.OrdinalIgnoreCase) &&
+                    Tracks.Any(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase) &&
+                                    string.Equals(t.Artist, artist, StringComparison.OrdinalIgnoreCase));
+
+                if (isDuplicateMetadata)
+                {
+                    duplicates.Add($"{title} — {artist}");
+                    continue;
+                }
+
                 var track = new Track
                 {
-                    Title = metadata.Title ?? TitleFromPath(path),
-                    Artist = metadata.Artist ?? "Unknown artist",
+                    Title = title,
+                    Artist = artist,
+                    Album = metadata.Album,
+                    Genre = metadata.Genre,
+                    Year = metadata.Year,
                     Duration = metadata.Duration,
                     FilePath = path,
                     PictureData = metadata.PictureData,
                 };
 
                 Tracks.Add(track);
-                lastAdded = track;
+                existingPaths.Add(path);
                 added++;
             }
             catch
@@ -322,6 +405,23 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         };
 
         IsLoading = false;
+
+        if (duplicates.Count > 0)
+        {
+            var dupList = duplicates.Distinct().ToList();
+            DuplicateModalTitle = dupList.Count == 1 ? "Audio Already Exists" : "Duplicate Audio Detected";
+            if (dupList.Count == 1)
+            {
+                DuplicateModalMessage = $"\"{dupList[0]}\" is already in your library.";
+            }
+            else
+            {
+                var preview = string.Join("\n", dupList.Take(8).Select(d => $"• {d}"));
+                var extra = dupList.Count > 8 ? $"\n... and {dupList.Count - 8} more" : "";
+                DuplicateModalMessage = $"{dupList.Count} track(s) already exist in your library and were skipped:\n\n{preview}{extra}";
+            }
+            ShowDuplicateModal = true;
+        }
     }
 
     [RelayCommand]
@@ -372,6 +472,169 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             ClearPlaybackState();
             StatusMessage = $"Could not play \"{track.Title}\": {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private void EditTrack(Track? track)
+    {
+        if (track is null)
+        {
+            return;
+        }
+
+        EditingTrack = track;
+        EditTitle = track.Title;
+        EditArtist = track.Artist;
+        EditAlbum = track.Album ?? "";
+        EditGenre = track.Genre ?? "";
+        EditYear = track.Year > 0 ? track.Year.ToString() : "";
+        EditFilePath = track.FilePath ?? "Unknown";
+        EditDuration = track.DurationDisplay;
+        EditPictureData = track.PictureData;
+        _editCoverArtChanged = false;
+
+        if (track.PictureData is { Length: > 0 })
+        {
+            try
+            {
+                using var ms = new MemoryStream(track.PictureData);
+                EditCoverArtBitmap = new Avalonia.Media.Imaging.Bitmap(ms);
+            }
+            catch
+            {
+                EditCoverArtBitmap = null;
+            }
+        }
+        else
+        {
+            EditCoverArtBitmap = null;
+        }
+
+        IsEditMetadataModalOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelEditMetadata()
+    {
+        IsEditMetadataModalOpen = false;
+        EditingTrack = null;
+        EditPictureData = null;
+        EditCoverArtBitmap = null;
+        _editCoverArtChanged = false;
+    }
+
+    [RelayCommand]
+    private async Task ChooseCoverArtAsync()
+    {
+        try
+        {
+            var imagePath = await _filePicker.PickImageFileAsync();
+            if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
+            {
+                return;
+            }
+
+            var bytes = await File.ReadAllBytesAsync(imagePath);
+            EditPictureData = bytes;
+            _editCoverArtChanged = true;
+
+            using var ms = new MemoryStream(bytes);
+            EditCoverArtBitmap = new Avalonia.Media.Imaging.Bitmap(ms);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not load image: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveCoverArt()
+    {
+        EditPictureData = null;
+        EditCoverArtBitmap = null;
+        _editCoverArtChanged = true;
+    }
+
+    [RelayCommand]
+    private async Task SaveTrackMetadataAsync()
+    {
+        if (EditingTrack is null)
+        {
+            return;
+        }
+
+        var track = EditingTrack;
+        var newTitle = string.IsNullOrWhiteSpace(EditTitle) ? TitleFromPath(track.FilePath ?? "") : EditTitle.Trim();
+        var newArtist = string.IsNullOrWhiteSpace(EditArtist) ? "Unknown artist" : EditArtist.Trim();
+        var newAlbum = string.IsNullOrWhiteSpace(EditAlbum) ? null : EditAlbum.Trim();
+        var newGenre = string.IsNullOrWhiteSpace(EditGenre) ? null : EditGenre.Trim();
+        uint.TryParse(EditYear, out var newYear);
+
+        track.Title = newTitle;
+        track.Artist = newArtist;
+        track.Album = newAlbum;
+        track.Genre = newGenre;
+        track.Year = newYear;
+
+        if (_editCoverArtChanged)
+        {
+            track.PictureData = EditPictureData;
+        }
+
+        if (!string.IsNullOrEmpty(track.FilePath) && File.Exists(track.FilePath))
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    using var tagFile = TagLib.File.Create(track.FilePath);
+                    tagFile.Tag.Title = newTitle;
+                    tagFile.Tag.Performers = new[] { newArtist };
+                    tagFile.Tag.Album = newAlbum ?? "";
+                    tagFile.Tag.Genres = string.IsNullOrEmpty(newGenre) ? Array.Empty<string>() : new[] { newGenre };
+                    tagFile.Tag.Year = newYear;
+
+                    if (_editCoverArtChanged)
+                    {
+                        if (EditPictureData is { Length: > 0 })
+                        {
+                            var pic = new TagLib.Picture(new TagLib.ByteVector(EditPictureData))
+                            {
+                                Type = TagLib.PictureType.FrontCover,
+                                Description = "Cover",
+                                MimeType = "image/jpeg"
+                            };
+                            tagFile.Tag.Pictures = new TagLib.IPicture[] { pic };
+                        }
+                        else
+                        {
+                            tagFile.Tag.Pictures = Array.Empty<TagLib.IPicture>();
+                        }
+                    }
+
+                    tagFile.Save();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to save tags to file: {ex.Message}");
+                }
+            });
+        }
+
+        if (ReferenceEquals(NowPlayingTrack, track))
+        {
+            OnPropertyChanged(nameof(NowPlayingTitle));
+            OnPropertyChanged(nameof(NowPlayingArtist));
+            OnPropertyChanged(nameof(NowPlayingCoverArt));
+            OnPropertyChanged(nameof(HasNowPlayingCoverArt));
+        }
+
+        StatusMessage = $"Updated metadata for \"{track.Title}\".";
+        IsEditMetadataModalOpen = false;
+        EditingTrack = null;
+        EditPictureData = null;
+        EditCoverArtBitmap = null;
+        _editCoverArtChanged = false;
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayPause))]

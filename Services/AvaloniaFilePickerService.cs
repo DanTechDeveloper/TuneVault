@@ -72,4 +72,35 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
 
         return folders[0].TryGetLocalPath();
     }
+
+    public async Task<string?> PickImageFileAsync()
+    {
+        var window = _windowProvider();
+        if (window is null)
+        {
+            return null;
+        }
+
+        var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select cover art image",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Images")
+                {
+                    Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.webp" },
+                    MimeTypes = new[] { "image/*" },
+                },
+                FilePickerFileTypes.All,
+            },
+        });
+
+        if (files.Count == 0)
+        {
+            return null;
+        }
+
+        return files[0].TryGetLocalPath();
+    }
 }

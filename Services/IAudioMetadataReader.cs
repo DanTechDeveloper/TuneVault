@@ -9,7 +9,10 @@ public sealed record AudioFileMetadata(
     string? Title,
     string? Artist,
     TimeSpan Duration,
-    byte[]? PictureData = null);
+    byte[]? PictureData = null,
+    string? Album = null,
+    string? Genre = null,
+    uint Year = 0);
 
 public interface IAudioMetadataReader
 {
@@ -33,6 +36,9 @@ public sealed class SoundFileMetadataReader : IAudioMetadataReader
         var title = Normalize(tags.Title);
         var artist = Normalize(tags.Artist);
         byte[]? pictureData = null;
+        string? album = null;
+        string? genre = null;
+        uint year = 0;
 
         try
         {
@@ -45,6 +51,10 @@ public sealed class SoundFileMetadataReader : IAudioMetadataReader
             {
                 artist = Normalize(tagFile.Tag.FirstPerformer ?? tagFile.Tag.FirstAlbumArtist);
             }
+
+            album = Normalize(tagFile.Tag.Album);
+            genre = Normalize(tagFile.Tag.FirstGenre);
+            year = tagFile.Tag.Year;
 
             var pic = tagFile.Tag.Pictures.FirstOrDefault();
             if (pic?.Data.Data is { Length: > 0 } bytes)
@@ -61,7 +71,10 @@ public sealed class SoundFileMetadataReader : IAudioMetadataReader
             title,
             artist,
             reader.TotalTime,
-            pictureData);
+            pictureData,
+            album,
+            genre,
+            year);
     }
 
     private static string? Normalize(string? value) =>

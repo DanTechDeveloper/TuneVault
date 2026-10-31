@@ -11,5 +11,7 @@ public interface IFilePickerService
     Task<IReadOnlyList<string>> PickAudioFilesAsync();
 
     Task<string?> PickAudioFolderAsync();
+
+    Task<string?> PickImageFileAsync();
 }
 

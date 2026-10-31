@@ -1,21 +1,33 @@
 using System;
 using System.IO;
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TuneVault.Models;
 
 /// <summary>
-/// Plain domain object for a track.
+/// Domain model for a track with observable properties for dynamic updates.
 /// </summary>
-public sealed class Track
+public sealed partial class Track : ObservableObject
 {
     private Bitmap? _coverArt;
 
     public Guid Id { get; init; } = Guid.NewGuid();
 
-    public required string Title { get; init; }
+    [ObservableProperty]
+    private string _title = "";
 
-    public string Artist { get; init; } = "Unknown artist";
+    [ObservableProperty]
+    private string _artist = "Unknown artist";
+
+    [ObservableProperty]
+    private string? _album;
+
+    [ObservableProperty]
+    private string? _genre;
+
+    [ObservableProperty]
+    private uint _year;
 
     /// <summary>Local audio file. Null for tracks created without a file.</summary>
     public string? FilePath { get; init; }
@@ -23,7 +35,10 @@ public sealed class Track
     public TimeSpan Duration { get; init; }
 
     /// <summary>Embedded raw image bytes from audio tags.</summary>
-    public byte[]? PictureData { get; init; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCoverArt))]
+    [NotifyPropertyChangedFor(nameof(CoverArt))]
+    private byte[]? _pictureData;
 
     public bool HasCoverArt => PictureData is { Length: > 0 };
 
@@ -46,7 +61,17 @@ public sealed class Track
             }
             return _coverArt;
         }
-        init => _coverArt = value;
+        set
+        {
+            _coverArt = value;
+            OnPropertyChanged();
+        }
+    }
+
+    partial void OnPictureDataChanged(byte[]? value)
+    {
+        _coverArt = null;
+        OnPropertyChanged(nameof(CoverArt));
     }
 
     public string DurationDisplay =>

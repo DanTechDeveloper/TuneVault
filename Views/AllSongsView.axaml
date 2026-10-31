@@ -86,8 +86,8 @@
                  IsVisible="{Binding HasTracks}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:Track">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
-                          ColumnSpacing="12"
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                          ColumnSpacing="10"
                           Margin="4,6">
                         <Border Width="38"
                                 Height="38"
@@ -137,6 +137,18 @@
                                    VerticalAlignment="Center"
                                    FontSize="12"
                                    Opacity="0.65"/>
+
+                        <Button Grid.Column="4"
+                                Content="⋮"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                CornerRadius="6"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).EditTrackCommand}"
+                                CommandParameter="{Binding .}"
+                                ToolTip.Tip="Track info and tags"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
