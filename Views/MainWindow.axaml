@@ -1,0 +1,247 @@
+
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:TuneVault.ViewModels"
+        xmlns:models="using:TuneVault.Models"
+        mc:Ignorable="d"
+        d:DesignWidth="960"
+        d:DesignHeight="620"
+        x:Class="TuneVault.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="TuneVault"
+        Width="960"
+        Height="620"
+        MinWidth="760"
+        MinHeight="480">
+
+    <DockPanel Margin="24">
+
+        <!-- Header -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="*,Auto"
+              Margin="0,0,0,20">
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="TuneVault"
+                           FontSize="30"
+                           FontWeight="Bold"/>
+
+                <TextBlock Text="Your personal offline music library"
+                           FontSize="13"
+                           Opacity="0.65"/>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Content="＋ Add Files"
+                    Command="{Binding AddFilesCommand}"
+                    VerticalAlignment="Center"
+                    Padding="16,10"/>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom"
+                Margin="0,16,0,0"
+                Padding="12,8"
+                CornerRadius="6"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="12"/>
+        </Border>
+
+        <!-- Main Content: Sidebar + Library + Now Playing -->
+        <Grid ColumnDefinitions="170,3*,2*"
+              ColumnSpacing="16">
+
+          <!-- LEFT SIDEBAR -->
+<Border Grid.Column="0"
+        Padding="11"
+        CornerRadius="10"
+        Background="#FFFFFF">
+
+    <StackPanel Spacing="8">
+
+        <TextBlock Text="LIBRARY"
+                   FontSize="12"
+                   FontWeight="Bold"
+                   Foreground="#8888A8"
+                   Margin="8,8,0,12"/>
+
+        <!-- Selected navigation -->
+        <Button Content="♫  All Songs"
+                HorizontalContentAlignment="Left"
+                Background="#292943"
+                Foreground="#FFFFFF"
+                Padding="12,10"/>
+
+        <Button Content="▣  Albums"
+                HorizontalContentAlignment="Left"
+                Background="Transparent"
+                Foreground="#B8B8CC"
+                Padding="12,10"/>
+
+        <Button Content="♙  Artists"
+                HorizontalContentAlignment="Left"
+                Background="Transparent"
+                Foreground="#B8B8CC"
+                Padding="12,10"/>
+
+        <Button Content="☷  Genres"
+                HorizontalContentAlignment="Left"
+                Background="Transparent"
+                Foreground="#B8B8CC"
+                Padding="12,10"/>
+
+    </StackPanel>
+</Border>
+
+            <!-- MUSIC LIBRARY -->
+            <Grid Grid.Column="1"
+                  RowDefinitions="Auto,*">
+
+                <Grid ColumnDefinitions="*,Auto"
+                      Margin="0,0,0,12">
+
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Music Library"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"/>
+
+                        <TextBlock Text="{Binding Tracks.Count, StringFormat='{}{0} tracks'}"
+                                   FontSize="12"
+                                   Opacity="0.6"/>
+                    </StackPanel>
+
+                </Grid>
+
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding Tracks}"
+                         SelectedItem="{Binding SelectedTrack, Mode=TwoWay}">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:Track">
+
+                            <Grid ColumnDefinitions="*,Auto"
+                                  Margin="4,8">
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <TextBlock Text="{Binding Artist}"
+                                               FontSize="12"
+                                               Opacity="0.65"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding DurationDisplay}"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"
+                                           Opacity="0.65"/>
+                            </Grid>
+
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <!-- NOW PLAYING PANEL -->
+            <ScrollViewer Grid.Column="2">
+
+                <StackPanel Spacing="16">
+
+                    <Border Padding="20"
+                            CornerRadius="10"
+                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+                        <StackPanel Spacing="14">
+
+                            <TextBlock Text="NOW PLAYING"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       LetterSpacing="1"
+                                       Opacity="0.6"/>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding NowPlayingTitle}"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           TextWrapping="Wrap"/>
+
+                                <TextBlock Text="{Binding NowPlayingArtist}"
+                                           FontSize="13"
+                                           Opacity="0.7"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <!-- Playback Progress -->
+                            <StackPanel Spacing="4">
+                                <Slider Minimum="0"
+                                        Maximum="{Binding DurationSeconds}"
+                                        Value="{Binding PositionSeconds, Mode=TwoWay}"/>
+
+                                <TextBlock Text="{Binding ProgressText}"
+                                           FontSize="11"
+                                           HorizontalAlignment="Right"
+                                           Opacity="0.65"/>
+                            </StackPanel>
+
+                            <!-- Playback Controls -->
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        Spacing="10">
+
+                                <Button Content="Play / Pause"
+                                        MinWidth="110"
+                                        Command="{Binding PlayPauseCommand}"/>
+
+                                <Button Content="Stop"
+                                        MinWidth="70"
+                                        Command="{Binding StopCommand}"/>
+                            </StackPanel>
+
+                            <!-- Volume -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="Volume"
+                                           FontSize="12"
+                                           Opacity="0.7"/>
+
+                                <Slider Minimum="0"
+                                        Maximum="1"
+                                        Value="{Binding Volume, Mode=TwoWay}"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Library Actions -->
+                    <Border Padding="16"
+                            CornerRadius="10"
+                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Track Management"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"/>
+
+                            <Button Content="Remove Selected Track"
+                                    Command="{Binding RemoveTrackCommand}"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Supported formats: WAV, MP3, FLAC, OGG, Opus and AIFF."
+                               FontSize="11"
+                               Opacity="0.55"
+                               TextWrapping="Wrap"/>
+
+                </StackPanel>
+            </ScrollViewer>
+
+        </Grid>
+
+    </DockPanel>
+</Window>
