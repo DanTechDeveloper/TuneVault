@@ -75,18 +75,7 @@
                         Padding="14,10"/>
             </StackPanel>
         </Grid>
-
-        <!-- Status Bar -->
-        <Border DockPanel.Dock="Bottom"
-                Margin="0,16,0,0"
-                Padding="12,8"
-                CornerRadius="6"
-                Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
-
-            <TextBlock Text="{Binding Status.Message}"
-                       FontSize="12"/>
-        </Border>
-
+        
         <!-- Main Content: Sidebar + Library + Now Playing -->
         <Grid ColumnDefinitions="170,3*,2*"
               ColumnSpacing="16">
@@ -169,99 +158,137 @@
                 <views:GenresView   IsVisible="{Binding IsGenresTab}"/>
             </Grid>
 
-            <!-- NOW PLAYING PANEL -->
-            <ScrollViewer Grid.Column="2">
+          
 
-                <StackPanel Spacing="16">
+<!-- NOW PLAYING PANEL -->
+<ScrollViewer Grid.Column="2">
 
-                    <Border Padding="20"
-                            CornerRadius="10"
-                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+    <Border
+        Padding="22"
+        CornerRadius="18"
+        Background="#FFFFFF"
+        BorderBrush="#E5E5EB"
+        BorderThickness="1">
 
-                        <StackPanel Spacing="14">
+        <StackPanel Spacing="22">
 
-                            <TextBlock Text="NOW PLAYING"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       LetterSpacing="1"
-                                       Opacity="0.6"/>
+            <!-- Album Artwork -->
+            <Border
+                Width="300"
+                Height="300"
+                CornerRadius="12"
+                ClipToBounds="True"
+                Background="#F1F1F5"
+                HorizontalAlignment="Center">
 
-                            <!-- Album Art -->
-                            <Border Width="180"
-                                    Height="180"
-                                    CornerRadius="10"
-                                    ClipToBounds="True"
-                                    Background="#222238"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,2,0,6">
-                                <Panel>
-                                    <TextBlock Text="♫"
-                                               FontSize="56"
-                                               Foreground="#8888A8"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               IsVisible="{Binding !Playback.HasNowPlayingCoverArt}"/>
-                                    <Image Source="{Binding Playback.NowPlayingCoverArt}"
-                                           Stretch="UniformToFill"
-                                           IsVisible="{Binding Playback.HasNowPlayingCoverArt}"/>
-                                </Panel>
-                            </Border>
+                <Panel>
+                    <TextBlock
+                        Text="♪"
+                        FontSize="65"
+                        Foreground="#B7B7C4"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding !Playback.HasNowPlayingCoverArt}"/>
 
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="{Binding Playback.NowPlayingTitle}"
-                                           FontSize="20"
-                                           FontWeight="Bold"
-                                           TextWrapping="Wrap"/>
+                    <Image
+                        Source="{Binding Playback.NowPlayingCoverArt}"
+                        Stretch="UniformToFill"
+                        IsVisible="{Binding Playback.HasNowPlayingCoverArt}"/>
+                </Panel>
+            </Border>
 
-                                <TextBlock Text="{Binding Playback.NowPlayingArtist}"
-                                           FontSize="13"
-                                           Opacity="0.7"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
+            <!-- Track Information -->
+            <StackPanel Spacing="5">
+                <TextBlock
+                    Text="{Binding Playback.NowPlayingTitle}"
+                    FontSize="21"
+                    FontWeight="Bold"
+                    Foreground="#20202A"
+                    TextAlignment="Center"
+                    TextWrapping="Wrap"
+                    HorizontalAlignment="Center"/>
 
-                            <!-- Playback Progress -->
-                            <StackPanel Spacing="4">
-                                <Slider Minimum="0"
-                                        Maximum="{Binding Playback.DurationSeconds}"
-                                        Value="{Binding Playback.PositionSeconds, Mode=TwoWay}"/>
+                <TextBlock
+                    Text="{Binding Playback.NowPlayingArtist}"
+                    FontSize="13"
+                    Foreground="#858590"
+                    TextAlignment="Center"
+                    TextWrapping="Wrap"
+                    HorizontalAlignment="Center"/>
+            </StackPanel>
 
-                                <TextBlock Text="{Binding Playback.ProgressText}"
-                                           FontSize="11"
-                                           HorizontalAlignment="Right"
-                                           Opacity="0.65"/>
-                            </StackPanel>
+            <!-- Playback Progress -->
+            <StackPanel Spacing="6">
 
-                            <!-- Playback Controls -->
-                            <StackPanel Orientation="Horizontal"
-                                        HorizontalAlignment="Center"
-                                        Spacing="10">
+                <Slider
+                    Minimum="0"
+                    Maximum="{Binding Playback.DurationSeconds}"
+                    Value="{Binding Playback.PositionSeconds, Mode=TwoWay}"/>
 
-                                <Button Content="Play / Pause"
-                                        MinWidth="110"
-                                        Command="{Binding Playback.PlayPauseCommand}"/>
+                <TextBlock
+                    Text="{Binding Playback.ProgressText}"
+                    FontSize="11"
+                    Foreground="#858590"
+                    HorizontalAlignment="Right"/>
+            </StackPanel>
 
-                                <Button Content="Stop"
-                                        MinWidth="70"
-                                        Command="{Binding Playback.StopCommand}"/>
-                            </StackPanel>
+            <!-- Playback Controls -->
+            <StackPanel
+                Orientation="Horizontal"
+                HorizontalAlignment="Center"
+                Spacing="12">
 
-                            <!-- Volume -->
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Volume"
-                                           FontSize="12"
-                                           Opacity="0.7"/>
+                <Button
+                    Content="Previous"
+                    MinWidth="85"
+                    Background="#F0F0F4"
+                    Foreground="#353541"
+                    IsEnabled="False"/>
 
-                                <Slider Minimum="0"
-                                        Maximum="1"
-                                        Value="{Binding Playback.Volume, Mode=TwoWay}"/>
-                            </StackPanel>
+                <Button
+                    Content="Play / Pause"
+                    MinWidth="120"
+                    Background="#7654D6"
+                    Foreground="#FFFFFF"
+                    FontWeight="SemiBold"
+                    Command="{Binding Playback.PlayPauseCommand}"/>
 
-                        </StackPanel>
-                    </Border>
+                <Button
+                    Content="Stop"
+                    MinWidth="75"
+                    Background="#F0F0F4"
+                    Foreground="#353541"
+                    Command="{Binding Playback.StopCommand}"/>
+            </StackPanel>
 
-                 
+            <!-- Volume -->
+            <Border
+                Background="#F7F7F9"
+                BorderBrush="#EBEBF0"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="14">
+
+                <StackPanel Spacing="8">
+
+                    <TextBlock
+                        Text="VOLUME"
+                        FontSize="10"
+                        FontWeight="Bold"
+                        Foreground="#858590"/>
+
+                    <Slider
+                        Minimum="0"
+                        Maximum="1"
+                        Value="{Binding Playback.Volume, Mode=TwoWay}"/>
                 </StackPanel>
-            </ScrollViewer>
+            </Border>
+
+        </StackPanel>
+    </Border>
+</ScrollViewer>
+
+
 
         </Grid>
 

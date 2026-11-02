@@ -35,9 +35,9 @@ public partial class MainWindow : Window
 
         if (_viewModel is not null)
         {
-            _ = LoadLibraryAsync(_viewModel);
-        }
-    }
+             _ = LoadLibraryAsync(_viewModel);
+         }
+     }
 
     private static async Task LoadLibraryAsync(MainWindowViewModel viewModel)
     {
@@ -51,13 +51,12 @@ public partial class MainWindow : Window
         }
     }
 
-    protected override void OnClosed(EventArgs e)
-    {
-        _progressTimer.Stop();
-        _progressTimer.Tick -= OnProgressTimerTick;
-        base.OnClosed(e);
-    }
-
+     protected override void OnClosed(EventArgs e)
+     {
+         _progressTimer.Stop();
+         _progressTimer.Tick -= OnProgressTimerTick;
+         base.OnClosed(e);
+     }
     private void OnProgressTimerTick(object? sender, EventArgs e)
     {
         _viewModel?.RefreshPlayback();
