@@ -20,7 +20,7 @@
                            FontSize="20"
                            FontWeight="SemiBold"/>
 
-                <TextBlock Text="{Binding Tracks.Count, StringFormat='{}{0} tracks'}"
+                <TextBlock Text="{Binding Library.Tracks.Count, StringFormat='{}{0} tracks'}"
                            FontSize="12"
                            Opacity="0.6"/>
             </StackPanel>
@@ -29,11 +29,12 @@
                         Orientation="Horizontal"
                         Spacing="8"
                         VerticalAlignment="Center"
-                        IsVisible="{Binding HasTracks}">
-                <Button Content="▶ Play"
-                        Command="{Binding PlayTrackCommand}"
+                        IsVisible="{Binding Library.HasTracks}">
+                <Button Content="{Binding Playback.PlayPauseLabel}"
+                        Command="{Binding Playback.PlayTrackCommand}"
                         Padding="16,8"
-                        FontWeight="SemiBold"/>
+                        FontWeight="SemiBold"
+                        ToolTip.Tip="Play or pause the loaded track"/>
             </StackPanel>
         </Grid>
 
@@ -44,7 +45,7 @@
                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                IsVisible="{Binding !HasTracks}">
+                IsVisible="{Binding !Library.HasTracks}">
 
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
@@ -70,10 +71,10 @@
                             HorizontalAlignment="Center"
                             Margin="0,8,0,0">
                     <Button Content="＋ Add File(s)"
-                            Command="{Binding AddFilesCommand}"
+                            Command="{Binding Library.AddFilesCommand}"
                             Padding="14,8"/>
                     <Button Content="📁 Add Folder"
-                            Command="{Binding AddFolderCommand}"
+                            Command="{Binding Library.AddFolderCommand}"
                             Padding="14,8"/>
                 </StackPanel>
             </StackPanel>
@@ -81,9 +82,9 @@
 
         <!-- Track Listing -->
         <ListBox Grid.Row="1"
-                 ItemsSource="{Binding Tracks}"
-                 SelectedItem="{Binding SelectedTrack, Mode=TwoWay}"
-                 IsVisible="{Binding HasTracks}">
+                 ItemsSource="{Binding Library.Tracks}"
+                 SelectedItem="{Binding Library.SelectedTrack, Mode=TwoWay}"
+                 IsVisible="{Binding Library.HasTracks}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:Track">
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
@@ -118,19 +119,25 @@
                             <TextBlock Text="{Binding Artist}"
                                        FontSize="12"
                                        Opacity="0.65"/>
+
+                            <TextBlock Text="⚠ File not found"
+                                       FontSize="11"
+                                       Opacity="0.75"
+                                       Foreground="#E0A030"
+                                       IsVisible="{Binding IsMissing}"/>
                         </StackPanel>
 
                         <Button Grid.Column="2"
-                                Content="▶"
+                                Content="{Binding PlayPauseGlyph}"
                                 Width="30"
                                 Height="30"
                                 Padding="0"
                                 CornerRadius="15"
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
-                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).PlayTrackCommand}"
+                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
                                 CommandParameter="{Binding .}"
-                                ToolTip.Tip="Play track"/>
+                                ToolTip.Tip="{Binding PlayPauseToolTip}"/>
 
                         <TextBlock Grid.Column="3"
                                    Text="{Binding DurationDisplay}"
@@ -146,7 +153,7 @@
                                 CornerRadius="6"
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
-                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).EditTrackCommand}"
+                                Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).Editor.EditTrackCommand}"
                                 CommandParameter="{Binding .}"
                                 ToolTip.Tip="Track info and tags"/>
                     </Grid>

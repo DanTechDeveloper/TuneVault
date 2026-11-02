@@ -7,7 +7,9 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Local Music Playback**: Decodes WAV, MP3, FLAC, OGG/Vorbis, Opus, and AIFF audio files using native `libsndfile` decoders (`SoundFileReader`).
 - **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Artists**, and **Genres**.
 - **Audio File & Folder Importing**: Add individual audio files or import entire directory trees with recursive scanning.
-- **Duplicate Audio Detection**: Automatically flags duplicates (by file path, metadata matching title/artist, or batch duplicates) with a warning modal.
+- **Persistent SQLite Library**: Added files and folders are stored in `library.db` under the per-user application data folder, so the library survives restarts.
+- **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
+- **Missing File Flagging**: Tracks whose file disappeared (or whose drive is offline) are flagged in the list instead of being deleted from the library.
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
 - **Fluent Design System**: Responsive UI with dark/light theme adaptation using Avalonia's fluent resources and high-contrast dialog overlays.
@@ -40,16 +42,23 @@ dotnet run --project TuneVault.csproj
 - **MVVM**: CommunityToolkit.Mvvm
 - **Audio Output & Decoding**: NAudio 3 (`NAudio.Core`, `NAudio.Alsa`, `NAudio.SoundFile`, `NAudio.Wasapi`)
 - **Metadata & ID3 Tags**: TagLibSharp
+- **Persistence**: SQLite via `Microsoft.Data.Sqlite`
 
 ## Architecture & Code Structure
 
 - `Program.cs` / `App.axaml.cs`: Application entry point and composition root.
-- `ViewModels/MainWindowViewModel.cs`: Core state and MVVM commands for navigation, playback, file import, and metadata editing.
+- `ViewModels/MainWindowViewModel.cs`: Thin window shell; owns tab navigation and exposes the feature ViewModels.
+- `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations.
+- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, and volume.
+- `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal and metadata saving.
+- `ViewModels/StatusViewModel.cs`: Shared status-bar message.
 - `Models/Track.cs`: Observable domain model for tracks.
 - `Services/`:
   - `IAudioPlayer` / `NaudioAudioPlayer`: Audio engine abstraction.
   - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser.
   - `IFilePickerService` / `AvaloniaFilePickerService`: Audio and image file selection.
+  - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, and schema (`~/.config/TuneVault/library.db` on Linux).
+  - `LibraryKeys`: Path/identity normalization shared by imports and the database.
 - `Views/`:
   - `MainWindow.axaml`: Main window layout with header, navigation sidebar, dynamic content, now playing sidebar, and modal overlays.
   - `AllSongsView.axaml`, `AlbumsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.

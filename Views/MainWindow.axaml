@@ -67,11 +67,11 @@
                         VerticalAlignment="Center">
 
                 <Button Content="＋ Add File(s)"
-                        Command="{Binding AddFilesCommand}"
+                        Command="{Binding Library.AddFilesCommand}"
                         Padding="14,10"/>
 
                 <Button Content="📁 Add Folder"
-                        Command="{Binding AddFolderCommand}"
+                        Command="{Binding Library.AddFolderCommand}"
                         Padding="14,10"/>
             </StackPanel>
         </Grid>
@@ -83,7 +83,7 @@
                 CornerRadius="6"
                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
 
-            <TextBlock Text="{Binding StatusMessage}"
+            <TextBlock Text="{Binding Status.Message}"
                        FontSize="12"/>
         </Border>
 
@@ -130,6 +130,34 @@
                 Command="{Binding SelectTabCommand}"
                 CommandParameter="{x:Static vm:NavigationTab.Genres}"/>
 
+        <Border Height="1"
+                Margin="4,8"
+                Background="#E4E4EF"/>
+
+        <TextBlock Text="SORT BY"
+                   FontSize="11"
+                   FontWeight="Bold"
+                   Foreground="#8888A8"
+                   Margin="8,0,0,4"/>
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding Library.SortFields}"
+                      SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch"
+                      IsEnabled="{Binding !Library.IsLoading}"/>
+
+            <Button Grid.Column="1"
+                    Content="{Binding Library.SortDirectionLabel}"
+                    Command="{Binding Library.ToggleSortDirectionCommand}"
+                    Padding="10,6"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    ToolTip.Tip="Toggle ascending / descending"
+                    IsEnabled="{Binding !Library.IsLoading}"/>
+        </Grid>
+
     </StackPanel>
 </Border>
 
@@ -172,20 +200,20 @@
                                                Foreground="#8888A8"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
-                                               IsVisible="{Binding !HasNowPlayingCoverArt}"/>
-                                    <Image Source="{Binding NowPlayingCoverArt}"
+                                               IsVisible="{Binding !Playback.HasNowPlayingCoverArt}"/>
+                                    <Image Source="{Binding Playback.NowPlayingCoverArt}"
                                            Stretch="UniformToFill"
-                                           IsVisible="{Binding HasNowPlayingCoverArt}"/>
+                                           IsVisible="{Binding Playback.HasNowPlayingCoverArt}"/>
                                 </Panel>
                             </Border>
 
                             <StackPanel Spacing="4">
-                                <TextBlock Text="{Binding NowPlayingTitle}"
+                                <TextBlock Text="{Binding Playback.NowPlayingTitle}"
                                            FontSize="20"
                                            FontWeight="Bold"
                                            TextWrapping="Wrap"/>
 
-                                <TextBlock Text="{Binding NowPlayingArtist}"
+                                <TextBlock Text="{Binding Playback.NowPlayingArtist}"
                                            FontSize="13"
                                            Opacity="0.7"
                                            TextWrapping="Wrap"/>
@@ -194,10 +222,10 @@
                             <!-- Playback Progress -->
                             <StackPanel Spacing="4">
                                 <Slider Minimum="0"
-                                        Maximum="{Binding DurationSeconds}"
-                                        Value="{Binding PositionSeconds, Mode=TwoWay}"/>
+                                        Maximum="{Binding Playback.DurationSeconds}"
+                                        Value="{Binding Playback.PositionSeconds, Mode=TwoWay}"/>
 
-                                <TextBlock Text="{Binding ProgressText}"
+                                <TextBlock Text="{Binding Playback.ProgressText}"
                                            FontSize="11"
                                            HorizontalAlignment="Right"
                                            Opacity="0.65"/>
@@ -210,11 +238,11 @@
 
                                 <Button Content="Play / Pause"
                                         MinWidth="110"
-                                        Command="{Binding PlayPauseCommand}"/>
+                                        Command="{Binding Playback.PlayPauseCommand}"/>
 
                                 <Button Content="Stop"
                                         MinWidth="70"
-                                        Command="{Binding StopCommand}"/>
+                                        Command="{Binding Playback.StopCommand}"/>
                             </StackPanel>
 
                             <!-- Volume -->
@@ -225,33 +253,13 @@
 
                                 <Slider Minimum="0"
                                         Maximum="1"
-                                        Value="{Binding Volume, Mode=TwoWay}"/>
+                                        Value="{Binding Playback.Volume, Mode=TwoWay}"/>
                             </StackPanel>
 
                         </StackPanel>
                     </Border>
 
-                    <!-- Library Actions -->
-                    <Border Padding="16"
-                            CornerRadius="10"
-                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
-
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Track Management"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"/>
-
-                            <Button Content="Remove Selected Track"
-                                    Command="{Binding RemoveTrackCommand}"
-                                    HorizontalAlignment="Stretch"/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Supported formats: WAV, MP3, FLAC, OGG, Opus and AIFF."
-                               FontSize="11"
-                               Opacity="0.55"
-                               TextWrapping="Wrap"/>
-
+                 
                 </StackPanel>
             </ScrollViewer>
 
@@ -261,7 +269,7 @@
 
         <!-- Loading Modal Overlay -->
         <Border Background="#80000000"
-                IsVisible="{Binding IsLoading}"
+                IsVisible="{Binding Library.IsLoading}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
@@ -288,11 +296,11 @@
 
                     <ProgressBar Minimum="0"
                                  Maximum="100"
-                                 Value="{Binding LoadingProgress}"
+                                 Value="{Binding Library.LoadingProgress}"
                                  Height="8"
                                  CornerRadius="4"/>
 
-                    <TextBlock Text="{Binding LoadingStatusText}"
+                    <TextBlock Text="{Binding Library.LoadingStatusText}"
                                FontSize="12"
                                Opacity="0.8"
                                TextAlignment="Center"
@@ -303,7 +311,7 @@
 
         <!-- Duplicate Audio Warning Modal Overlay -->
         <Border Background="#80000000"
-                IsVisible="{Binding ShowDuplicateModal}"
+                IsVisible="{Binding Library.ShowDuplicateModal}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
@@ -322,14 +330,14 @@
                                    FontSize="32"
                                    Foreground="#F59E0B"
                                    HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding DuplicateModalTitle}"
+                        <TextBlock Text="{Binding Library.DuplicateModalTitle}"
                                    FontSize="16"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <ScrollViewer MaxHeight="200">
-                        <TextBlock Text="{Binding DuplicateModalMessage}"
+                        <TextBlock Text="{Binding Library.DuplicateModalMessage}"
                                    FontSize="13"
                                    Opacity="0.85"
                                    TextAlignment="Center"
@@ -340,7 +348,7 @@
                             HorizontalAlignment="Center"
                             MinWidth="100"
                             HorizontalContentAlignment="Center"
-                            Command="{Binding CloseDuplicateModalCommand}"
+                            Command="{Binding Library.CloseDuplicateModalCommand}"
                             Padding="18,8"
                             FontWeight="SemiBold"/>
                 </StackPanel>
@@ -349,7 +357,7 @@
 
         <!-- Track Info & Metadata Editor Modal Overlay -->
         <Border Background="#80000000"
-                IsVisible="{Binding IsEditMetadataModalOpen}"
+                IsVisible="{Binding Editor.IsEditMetadataModalOpen}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
@@ -380,7 +388,7 @@
                                 Padding="0"
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
-                                Command="{Binding CancelEditMetadataCommand}"/>
+                                Command="{Binding Editor.CancelEditMetadataCommand}"/>
                     </Grid>
 
                     <ScrollViewer MaxHeight="380">
@@ -398,10 +406,10 @@
                                                    Foreground="#8888A8"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
-                                                   IsVisible="{Binding !HasEditCoverArt}"/>
-                                        <Image Source="{Binding EditCoverArtBitmap}"
+                                                   IsVisible="{Binding !Editor.HasEditCoverArt}"/>
+                                        <Image Source="{Binding Editor.EditCoverArtBitmap}"
                                                Stretch="UniformToFill"
-                                               IsVisible="{Binding HasEditCoverArt}"/>
+                                               IsVisible="{Binding Editor.HasEditCoverArt}"/>
                                     </Panel>
                                 </Border>
 
@@ -411,12 +419,12 @@
                                         <Button Content="📁 Choose Image"
                                                 Padding="10,6"
                                                 FontSize="12"
-                                                Command="{Binding ChooseCoverArtCommand}"/>
+                                                Command="{Binding Editor.ChooseCoverArtCommand}"/>
                                         <Button Content="🗑 Remove"
                                                 Padding="10,6"
                                                 FontSize="12"
-                                                IsVisible="{Binding HasEditCoverArt}"
-                                                Command="{Binding RemoveCoverArtCommand}"/>
+                                                IsVisible="{Binding Editor.HasEditCoverArt}"
+                                                Command="{Binding Editor.RemoveCoverArtCommand}"/>
                                     </StackPanel>
                                     <TextBlock Text="Supports JPG, PNG, WEBP, BMP" FontSize="11" Opacity="0.55"/>
                                 </StackPanel>
@@ -427,29 +435,29 @@
                             <!-- Metadata Fields -->
                             <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Title" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditTitle, Mode=TwoWay}" Watermark="Song title"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Editor.EditTitle, Mode=TwoWay}" Watermark="Song title"/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Artist" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditArtist, Mode=TwoWay}" Watermark="Artist name"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Editor.EditArtist, Mode=TwoWay}" Watermark="Artist name"/>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Album" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditAlbum, Mode=TwoWay}" Watermark="Album title"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Editor.EditAlbum, Mode=TwoWay}" Watermark="Album title"/>
 
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Genre" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditGenre, Mode=TwoWay}" Watermark="Music genre"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Editor.EditGenre, Mode=TwoWay}" Watermark="Music genre"/>
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Year" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditYear, Mode=TwoWay}" Watermark="Release year"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Editor.EditYear, Mode=TwoWay}" Watermark="Release year"/>
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Opacity="0.2"/>
 
                             <!-- Read-only Audio Details -->
                             <StackPanel Spacing="4">
-                                <TextBlock Text="{Binding EditDuration, StringFormat='Duration: {0}'}"
+                                <TextBlock Text="{Binding Editor.EditDuration, StringFormat='Duration: {0}'}"
                                            FontSize="11"
                                            Opacity="0.6"/>
-                                <TextBlock Text="{Binding EditFilePath, StringFormat='Location: {0}'}"
+                                <TextBlock Text="{Binding Editor.EditFilePath, StringFormat='Location: {0}'}"
                                            FontSize="11"
                                            Opacity="0.6"
                                            TextWrapping="Wrap"/>
@@ -464,12 +472,68 @@
                                 Margin="0,4,0,0">
                         <Button Content="Cancel"
                                 MinWidth="80"
-                                Command="{Binding CancelEditMetadataCommand}"
+                                Command="{Binding Editor.CancelEditMetadataCommand}"
                                 Padding="14,8"/>
                         <Button Content="Save Changes"
                                 MinWidth="110"
-                                Command="{Binding SaveTrackMetadataCommand}"
+                                Command="{Binding Editor.SaveTrackMetadataCommand}"
                                 Padding="16,8"
+                                FontWeight="SemiBold"/>
+                        <Button Content="🗑 Delete"
+                                Command="{Binding Editor.RequestRemoveEditingTrackCommand}"
+                                HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Delete Track Confirmation Modal Overlay -->
+        <Border Background="#80000000"
+                IsVisible="{Binding Library.ShowDeleteConfirmation}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Padding="32,24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MinWidth="360"
+                    MaxWidth="460">
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                        <TextBlock Text="🗑"
+                                   FontSize="32"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Delete Track?"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Library.DeleteConfirmationMessage}"
+                               FontSize="13"
+                               Opacity="0.85"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Spacing="10">
+                        <Button Content="Cancel"
+                                MinWidth="100"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding Library.CancelRemoveTrackCommand}"
+                                Padding="18,8"/>
+                        <Button Content="Delete"
+                                MinWidth="100"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding Library.ConfirmRemoveTrackCommand}"
+                                Padding="18,8"
+                                Background="#C0392B"
+                                Foreground="White"
                                 FontWeight="SemiBold"/>
                     </StackPanel>
                 </StackPanel>

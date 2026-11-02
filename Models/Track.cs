@@ -42,6 +42,26 @@ public sealed partial class Track : ObservableObject
 
     public bool HasCoverArt => PictureData is { Length: > 0 };
 
+    /// <summary>
+    /// True when the persisted file could not be found at load time. Computed from
+    /// disk on startup and never stored: an unmounted drive must not lose library rows.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isMissing;
+
+    /// <summary>
+    /// True while this track is the one currently producing audio. Kept on the
+    /// model so the per-row play button can react to playback state.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlayPauseGlyph))]
+    [NotifyPropertyChangedFor(nameof(PlayPauseToolTip))]
+    private bool _isPlaying;
+
+    public string PlayPauseGlyph => IsPlaying ? "❚❚" : "▶";
+
+    public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
+
     /// <summary>Decoded bitmap for UI binding.</summary>
     public Bitmap? CoverArt
     {

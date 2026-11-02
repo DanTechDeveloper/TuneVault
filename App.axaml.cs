@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -25,7 +27,26 @@ public partial class App : Application
             var audioPlayer = new NaudioAudioPlayer();
             var metadataReader = new SoundFileMetadataReader();
             var filePicker = new AvaloniaFilePickerService(() => window);
-            var viewModel = new MainWindowViewModel(audioPlayer, metadataReader, filePicker);
+
+            var status = new StatusViewModel();
+            var repository = new SqliteLibraryRepository();
+
+            // Schema creation is a few milliseconds of DDL: do it here so no command
+            // can fire before the tables exist. A broken database must not block startup.
+            // Task.Run keeps the blocking wait off the UI synchronization context.
+            try
+            {
+                Task.Run(() => repository.InitializeAsync()).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                status.Message = $"Could not open the library database: {ex.Message}";
+            }
+
+            var library = new LibraryViewModel(metadataReader, filePicker, repository, status);
+            var playback = new PlaybackViewModel(audioPlayer, library, status);
+            var editor = new MetadataEditorViewModel(filePicker, library, status);
+            var viewModel = new MainWindowViewModel(library, playback, editor, status);
 
             window = new MainWindow(viewModel);
             desktop.MainWindow = window;

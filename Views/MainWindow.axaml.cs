@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using TuneVault.ViewModels;
@@ -31,6 +32,23 @@ public partial class MainWindow : Window
     {
         base.OnOpened(e);
         _progressTimer.Start();
+
+        if (_viewModel is not null)
+        {
+            _ = LoadLibraryAsync(_viewModel);
+        }
+    }
+
+    private static async Task LoadLibraryAsync(MainWindowViewModel viewModel)
+    {
+        try
+        {
+            await viewModel.Library.LoadLibraryAsync();
+        }
+        catch (Exception ex)
+        {
+            viewModel.Status.Message = $"Could not load the library database: {ex.Message}";
+        }
     }
 
     protected override void OnClosed(EventArgs e)
