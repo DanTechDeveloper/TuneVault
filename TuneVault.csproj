@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Tests live in a separate project; keep them out of the main build. -->
+    <Compile Remove="TuneVault.Tests\**\*.cs" />
+    <AvaloniaResource Remove="TuneVault.Tests\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />

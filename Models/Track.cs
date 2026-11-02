@@ -23,6 +23,9 @@ public sealed partial class Track : ObservableObject
     private string _artist = "Unknown artist";
 
     [ObservableProperty]
+    private string? _albumArtist;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ArtistAlbum))]
     private string? _album;
 
@@ -69,6 +72,9 @@ public sealed partial class Track : ObservableObject
     public string ArtistAlbum => string.IsNullOrWhiteSpace(Album)
         ? Artist
         : $"{Artist} - {Album}";
+
+    /// <summary>Album artist for grouping, falling back to track artist when unset.</summary>
+    public string EffectiveAlbumArtist => string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist!;
 
     /// <summary>Decoded bitmap for UI binding.</summary>
     public Bitmap? CoverArt

@@ -1,0 +1,208 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:models="using:TuneVault.Models"
+             xmlns:views="using:TuneVault.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="500"
+             d:DesignHeight="500"
+             x:Class="TuneVault.Views.AlbumArtistsView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <Grid ColumnDefinitions="*,Auto"
+              Margin="0,0,0,12">
+            <StackPanel Spacing="2">
+                <TextBlock Text="Album Artists"
+                           FontSize="20"
+                           FontWeight="SemiBold"/>
+
+                <TextBlock Text="Browse your music collection by album artist"
+                           FontSize="12"
+                           Opacity="0.6"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Layer 1: Artist list -->
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Library.Artists}"
+                 SelectedItem="{Binding Library.SelectedArtist, Mode=TwoWay}"
+                 IsVisible="{Binding !Library.IsArtistDetailView}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="models:ArtistSummary">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10"
+                          Margin="4,6">
+                        <Border Width="38"
+                                Height="38"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                Background="#2A2A3E"
+                                VerticalAlignment="Center">
+                            <Panel>
+                                <TextBlock Text="🎤"
+                                           FontSize="16"
+                                           Foreground="#8888A8"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !HasCoverArt}"/>
+                                <Image Source="{Binding CoverArt}"
+                                       Stretch="UniformToFill"
+                                       IsVisible="{Binding HasCoverArt}"/>
+                            </Panel>
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
+
+                            <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
+                                       FontSize="12"
+                                       Opacity="0.65"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Layer 1 empty state -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowArtistsEmpty}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="🎤"
+                           FontSize="48"
+                           HorizontalAlignment="Center"
+                           Opacity="0.4"/>
+                <TextBlock Text="No artists yet"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Import music to see artists here."
+                           FontSize="13"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Layer 2: artist detail -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*"
+              IsVisible="{Binding Library.ShowArtistDetail}">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <Button Command="{Binding Library.BackToArtistsCommand}"
+                        Padding="6"
+                        Background="Transparent"
+                        ToolTip.Tip="Back to artists">
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#353541" />
+                </Button>
+                <TextBlock Text="{Binding Library.SelectedArtist.Name}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- ALL ALBUM ARTIST SONGS entry -->
+            <Button Grid.Row="1"
+                    Command="{Binding Library.ShowAllArtistSongsCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Padding="12,10"
+                    Margin="0,0,0,12"
+                    Background="#F0F0F4"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <materialIcons:MaterialIcon Kind="QueueMusic" Width="20" Height="20" Foreground="#7654D6" />
+                    <TextBlock Text="ALL ALBUM ARTIST SONGS"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding Library.ArtistAlbums}"
+                     SelectedItem="{Binding Library.SelectedArtistAlbum, Mode=TwoWay}"
+                     IsVisible="{Binding Library.HasArtistAlbums}"
+                     ItemTemplate="{StaticResource AlbumRowTemplate}"/>
+
+            <Border Grid.Row="2"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding !Library.HasArtistAlbums}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No albums"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="This artist has no albums."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Layer 3/4: song list -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*"
+              IsVisible="{Binding Library.IsArtistSongsView}">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <Button Command="{Binding Library.BackToArtistCommand}"
+                        Padding="6"
+                        Background="Transparent"
+                        ToolTip.Tip="Back to artist">
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#353541" />
+                </Button>
+                <TextBlock Text="{Binding Library.ArtistSongsTitle}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding Library.ArtistSongs}"
+                     SelectedItem="{Binding Library.SelectedTrack, Mode=TwoWay}"
+                     IsVisible="{Binding Library.HasArtistSongs}"
+                     ItemTemplate="{StaticResource TrackRowTemplate}"/>
+
+            <Border Grid.Row="1"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding !Library.HasArtistSongs}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No tracks"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="No songs found."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>

@@ -16,5 +16,19 @@
         <DataTemplate x:Key="TrackRowTemplate" x:DataType="models:Track">
             <views:TrackRow />
         </DataTemplate>
+        <DataTemplate x:Key="AlbumRowTemplate" x:DataType="models:AlbumSummary">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="4,6">
+                <Border Width="38" Height="38" CornerRadius="6" ClipToBounds="True" Background="#2A2A3E" VerticalAlignment="Center">
+                    <Panel>
+                        <TextBlock Text="▣" FontSize="16" Foreground="#8888A8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasCoverArt}"/>
+                        <Image Source="{Binding CoverArt}" Stretch="UniformToFill" IsVisible="{Binding HasCoverArt}"/>
+                    </Panel>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}" FontSize="12" Opacity="0.65"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
     </Application.Resources>
 </Application>

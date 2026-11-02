@@ -54,6 +54,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
         AlbumTracks = new ObservableCollection<Track>();
         AlbumTracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasAlbumTracks));
+
+        Artists = new ObservableCollection<ArtistSummary>();
+        Artists.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasArtists));
+            OnPropertyChanged(nameof(ShowArtistsEmpty));
+        };
+
+        ArtistAlbums = new ObservableCollection<AlbumSummary>();
+        ArtistAlbums.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasArtistAlbums));
+
+        ArtistSongs = new ObservableCollection<Track>();
+        ArtistSongs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasArtistSongs));
     }
 
     public ObservableCollection<Track> Tracks { get; }
@@ -67,6 +80,70 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public ObservableCollection<Track> AlbumTracks { get; }
 
     public bool HasAlbumTracks => AlbumTracks.Count > 0;
+
+    public ObservableCollection<ArtistSummary> Artists { get; }
+
+    public bool HasArtists => Artists.Count > 0;
+
+    public bool ShowArtistsEmpty => !IsArtistDetailView && !HasArtists;
+
+    public ObservableCollection<AlbumSummary> ArtistAlbums { get; }
+
+    public bool HasArtistAlbums => ArtistAlbums.Count > 0;
+
+    public ObservableCollection<Track> ArtistSongs { get; }
+
+    public bool HasArtistSongs => ArtistSongs.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsArtistDetailView))]
+    [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
+    private ArtistSummary? _selectedArtist;
+
+    partial void OnSelectedArtistChanged(ArtistSummary? value)
+    {
+        // Reset song-view state so a previously selected artist's title/list
+        // never leaks into the newly selected artist (stale data).
+        IsArtistAllSongsView = false;
+        SelectedArtistAlbum = null;
+        ArtistSongs.Clear();
+        ArtistSongsTitle = string.Empty;
+
+        if (value is null)
+        {
+            ArtistAlbums.Clear();
+        }
+        else
+        {
+            RefreshArtistAlbums();
+        }
+    }
+
+    public bool IsArtistDetailView => SelectedArtist is not null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
+    private AlbumSummary? _selectedArtistAlbum;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
+    private bool _isArtistAllSongsView;
+
+    public bool IsArtistSongsView => IsArtistAllSongsView || SelectedArtistAlbum is not null;
+
+    public bool ShowArtistDetail => IsArtistDetailView && !IsArtistSongsView;
+
+    public bool ShowArtistSongs => IsArtistSongsView;
+
+    [ObservableProperty]
+    private string _artistSongsTitle = "";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAlbumDetailView))]
@@ -251,6 +328,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
             RefreshTracksView();
             RefreshAlbumsView();
+            RefreshArtistsView();
 
             if (SelectedTrack is null && Tracks.Count > 0)
             {
@@ -288,6 +366,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             RefreshAlbumTracksView();
         }
         RefreshAlbumsView();
+        RefreshArtistsView();
+        if (SelectedArtist is not null && IsArtistSongsView)
+        {
+            RefreshArtistSongs();
+        }
 
         SelectedTrack = Tracks.FirstOrDefault(t => t.Id == selectedId) ?? Tracks.FirstOrDefault();
         return Task.CompletedTask;
@@ -371,6 +454,132 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             AlbumTracks.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
         }
+    }
+
+    private static string NormalizeArtist(string? artist) =>
+        string.IsNullOrWhiteSpace(artist) ? "Unknown Artist" : artist.Trim();
+
+    private void RefreshArtistsView()
+    {
+        var term = SearchText;
+        var groups = _allTracks
+            .GroupBy(t => NormalizeArtist(t.EffectiveAlbumArtist))
+            .Select(g => new ArtistSummary(
+                g.Key,
+                g.Count(),
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
+            .Where(a => string.IsNullOrWhiteSpace(term)
+                        || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Artists.Clear();
+        foreach (var a in groups)
+        {
+            Artists.Add(a);
+        }
+    }
+
+    private void RefreshArtistAlbums()
+    {
+        if (SelectedArtist is null) return;
+        var artistName = SelectedArtist.Name;
+        var groups = _allTracks
+            .Where(t => NormalizeArtist(t.EffectiveAlbumArtist) == artistName)
+            .GroupBy(t => NormalizeAlbum(t.Album))
+            .Select(g => new AlbumSummary(
+                g.Key,
+                g.Count(),
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
+            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        ArtistAlbums.Clear();
+        foreach (var a in groups)
+        {
+            ArtistAlbums.Add(a);
+        }
+    }
+
+    private void RefreshArtistSongs()
+    {
+        if (SelectedArtist is null) return;
+        var artistName = SelectedArtist.Name;
+        var term = SearchText;
+        IEnumerable<Track> source;
+
+        if (SelectedArtistAlbum is not null)
+        {
+            var albumName = SelectedArtistAlbum.Name;
+            source = _allTracks.Where(t =>
+                NormalizeArtist(t.EffectiveAlbumArtist) == artistName
+                && NormalizeAlbum(t.Album) == albumName);
+        }
+        else if (IsArtistAllSongsView)
+        {
+            source = _allTracks.Where(t => NormalizeArtist(t.EffectiveAlbumArtist) == artistName);
+        }
+        else
+        {
+            return;
+        }
+
+        var filtered = source.Where(t => MatchesSearch(t, term));
+        var ordered = SortTracks(filtered).ToList();
+
+        var existing = ArtistSongs.ToDictionary(t => t.Id);
+        ArtistSongs.Clear();
+        foreach (var track in ordered)
+        {
+            ArtistSongs.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
+        }
+    }
+
+    [RelayCommand]
+    private void SelectArtist(ArtistSummary artist)
+    {
+        // State reset + album loading handled by OnSelectedArtistChanged.
+        SelectedArtist = artist;
+    }
+
+    [RelayCommand]
+    private void ShowAllArtistSongs()
+    {
+        if (SelectedArtist is null) return;
+        IsArtistAllSongsView = true;
+        SelectedArtistAlbum = null;
+        ArtistSongsTitle = $"All {SelectedArtist.Name} Songs";
+        RefreshArtistSongs();
+    }
+
+    [RelayCommand]
+    private void SelectArtistAlbum(AlbumSummary album)
+    {
+        if (SelectedArtist is null) return;
+        SelectedArtistAlbum = album;
+        IsArtistAllSongsView = false;
+        ArtistSongsTitle = album.Name;
+        RefreshArtistSongs();
+    }
+
+    [RelayCommand]
+    private void BackToArtist()
+    {
+        IsArtistAllSongsView = false;
+        SelectedArtistAlbum = null;
+        ArtistSongs.Clear();
+        ArtistSongsTitle = string.Empty;
+    }
+
+    [RelayCommand]
+    private void BackToArtists()
+    {
+        SelectedArtist = null;
+        ArtistAlbums.Clear();
+        ArtistSongs.Clear();
+        IsArtistAllSongsView = false;
+        SelectedArtistAlbum = null;
+        ArtistSongsTitle = string.Empty;
     }
 
     partial void OnSortFieldChanged(TrackSortField value)
@@ -510,6 +719,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                     FilePath = fullPath,
                     Title = metadata.Title ?? TitleFromPath(fullPath),
                     Artist = metadata.Artist ?? "Unknown artist",
+                    AlbumArtist = metadata.AlbumArtist,
                     Album = metadata.Album,
                     Genre = metadata.Genre,
                     Year = metadata.Year,

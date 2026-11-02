@@ -5,5 +5,6 @@ public enum NavigationTab
     AllSongs,
     Albums,
     Artists,
+    AlbumArtists,
     Genres
 }

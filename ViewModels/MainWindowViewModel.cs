@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,7 +17,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsAllSongsTab => CurrentTab == NavigationTab.AllSongs;
     public bool IsAlbumsTab => CurrentTab == NavigationTab.Albums;
     public bool IsArtistsTab => CurrentTab == NavigationTab.Artists;
+    public bool IsAlbumArtists => CurrentTab == NavigationTab.AlbumArtists;
     public bool IsGenresTab => CurrentTab == NavigationTab.Genres;
+
+    /// <summary>True when the active view has a sortable track list.</summary>
+    public bool CanSort => IsAllSongsTab
+        || (IsAlbumsTab && Library.IsAlbumDetailView)
+        || (IsAlbumArtists && Library.IsArtistSongsView);
+
+    /// <summary>CanSort combined with not-loading, for binding to IsEnabled.</summary>
+    public bool CanSortTracks => CanSort && !Library.IsLoading;
 
     public MainWindowViewModel(
         LibraryViewModel library,
@@ -28,6 +38,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         Editor = editor;
 
         Library.SearchCompleted += () => CurrentTab = NavigationTab.AllSongs;
+        Library.PropertyChanged += OnLibraryPropertyChangedForSort;
+    }
+
+    private void OnLibraryPropertyChangedForSort(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LibraryViewModel.IsLoading) ||
+            e.PropertyName == nameof(LibraryViewModel.IsAlbumDetailView) ||
+            e.PropertyName == nameof(LibraryViewModel.IsArtistSongsView))
+        {
+            OnPropertyChanged(nameof(CanSort));
+            OnPropertyChanged(nameof(CanSortTracks));
+        }
     }
 
     public LibraryViewModel Library { get; }
@@ -41,7 +63,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsAllSongsTab));
         OnPropertyChanged(nameof(IsAlbumsTab));
         OnPropertyChanged(nameof(IsArtistsTab));
+        OnPropertyChanged(nameof(IsAlbumArtists));
         OnPropertyChanged(nameof(IsGenresTab));
+        OnPropertyChanged(nameof(CanSort));
+        OnPropertyChanged(nameof(CanSortTracks));
     }
 
     [RelayCommand]

@@ -15,7 +15,7 @@ namespace TuneVault.Services;
 /// </summary>
 public sealed class SqliteLibraryRepository : ILibraryRepository
 {
-    private const int SchemaVersion = 1;
+    private const int SchemaVersion = 2;
 
     // SQLITE_CONSTRAINT_PRIMARYKEY / SQLITE_CONSTRAINT_UNIQUE
     private const int PrimaryKeyConstraint = 1555;
@@ -56,6 +56,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             file_path      TEXT NOT NULL,
             title          TEXT NOT NULL,
             artist         TEXT NOT NULL,
+            album_artist   TEXT,
             album          TEXT,
             genre          TEXT,
             year           INTEGER NOT NULL DEFAULT 0,
@@ -96,6 +97,24 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
         using var transaction = connection.BeginTransaction();
         await ExecuteAsync(connection, transaction, SchemaSql, cancellationToken);
+
+        if (version < 2)
+        {
+            // v1 -> v2: add album_artist column (idempotent: ignore if it already exists)
+            try
+            {
+                await ExecuteAsync(connection, transaction,
+                    "ALTER TABLE tracks ADD COLUMN album_artist TEXT;", cancellationToken);
+            }
+            catch (SqliteException)
+            {
+                // column already present (fresh DB created by SchemaSql above)
+            }
+
+            await ExecuteAsync(connection, transaction,
+                "UPDATE tracks SET album_artist = artist WHERE album_artist IS NULL;", cancellationToken);
+        }
+
         await ExecuteAsync(connection, transaction, $"PRAGMA user_version = {SchemaVersion};", cancellationToken);
         transaction.Commit();
     }
@@ -126,7 +145,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
         command.CommandText = $"""
             SELECT t.id, t.file_path, t.title, t.artist,
-                   t.album, t.genre, t.year, t.duration_ticks, a.data
+                   t.album_artist, t.album, t.genre, t.year, t.duration_ticks, a.data
             FROM tracks t
             LEFT JOIN track_art a ON a.track_id = t.id
             ORDER BY {missingTerm}{column} {direction},
@@ -142,11 +161,12 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                 FilePath = reader.GetString(1),
                 Title = reader.GetString(2),
                 Artist = reader.GetString(3),
-                Album = reader.IsDBNull(4) ? null : reader.GetString(4),
-                Genre = reader.IsDBNull(5) ? null : reader.GetString(5),
-                Year = (uint)reader.GetInt64(6),
-                Duration = TimeSpan.FromTicks(reader.GetInt64(7)),
-                PictureData = reader.IsDBNull(8) ? null : (byte[])reader.GetValue(8),
+                AlbumArtist = reader.IsDBNull(4) ? null : reader.GetString(4),
+                Album = reader.IsDBNull(5) ? null : reader.GetString(5),
+                Genre = reader.IsDBNull(6) ? null : reader.GetString(6),
+                Year = (uint)reader.GetInt64(7),
+                Duration = TimeSpan.FromTicks(reader.GetInt64(8)),
+                PictureData = reader.IsDBNull(9) ? null : (byte[])reader.GetValue(9),
             });
         }
 
@@ -256,13 +276,14 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             command.CommandText = """
                 UPDATE tracks
                 SET identity_key = $identity, title = $title, artist = $artist,
-                    album = $album, genre = $genre, year = $year, duration_ticks = $duration
+                    album_artist = $albumArtist, album = $album, genre = $genre, year = $year, duration_ticks = $duration
                 WHERE id = $id;
                 """;
             command.Parameters.AddWithValue("$id", track.Id.ToString("D"));
             command.Parameters.AddWithValue("$identity", (object?)identityKey ?? DBNull.Value);
             command.Parameters.AddWithValue("$title", track.Title);
             command.Parameters.AddWithValue("$artist", track.Artist);
+            command.Parameters.AddWithValue("$albumArtist", (object?)track.AlbumArtist ?? DBNull.Value);
             command.Parameters.AddWithValue("$album", (object?)track.Album ?? DBNull.Value);
             command.Parameters.AddWithValue("$genre", (object?)track.Genre ?? DBNull.Value);
             command.Parameters.AddWithValue("$year", (long)track.Year);
@@ -315,10 +336,10 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO tracks
-                (id, path_key, identity_key, file_path, title, artist, album, genre,
+                (id, path_key, identity_key, file_path, title, artist, album_artist, album, genre,
                  year, duration_ticks, date_added)
             VALUES
-                ($id, $pathKey, $identity, $filePath, $title, $artist, $album, $genre,
+                ($id, $pathKey, $identity, $filePath, $title, $artist, $albumArtist, $album, $genre,
                  $year, $duration, $dateAdded);
             """;
         command.Parameters.AddWithValue("$id", track.Id.ToString("D"));
@@ -327,6 +348,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Parameters.AddWithValue("$filePath", track.FilePath!);
         command.Parameters.AddWithValue("$title", track.Title);
         command.Parameters.AddWithValue("$artist", track.Artist);
+        command.Parameters.AddWithValue("$albumArtist", (object?)track.AlbumArtist ?? DBNull.Value);
         command.Parameters.AddWithValue("$album", (object?)track.Album ?? DBNull.Value);
         command.Parameters.AddWithValue("$genre", (object?)track.Genre ?? DBNull.Value);
         command.Parameters.AddWithValue("$year", (long)track.Year);
