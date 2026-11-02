@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "36YSeMOm0OA=",
+  "dgSpecHash": "AYnUK0Soj1M=",
   "success": true,
   "projectFilePath": "/opt/lampp/htdocs/TuneVault/TuneVault.csproj",
   "expectedPackageFiles": [
@@ -25,6 +25,8 @@
     "/home/dan/.nuget/packages/harfbuzzsharp.nativeassets.macos/8.3.1.1/harfbuzzsharp.nativeassets.macos.8.3.1.1.nupkg.sha512",
     "/home/dan/.nuget/packages/harfbuzzsharp.nativeassets.webassembly/8.3.1.1/harfbuzzsharp.nativeassets.webassembly.8.3.1.1.nupkg.sha512",
     "/home/dan/.nuget/packages/harfbuzzsharp.nativeassets.win32/8.3.1.1/harfbuzzsharp.nativeassets.win32.8.3.1.1.nupkg.sha512",
+    "/home/dan/.nuget/packages/material.icons/2.4.1/material.icons.2.4.1.nupkg.sha512",
+    "/home/dan/.nuget/packages/material.icons.avalonia/2.4.1/material.icons.avalonia.2.4.1.nupkg.sha512",
     "/home/dan/.nuget/packages/microcom.runtime/0.11.0/microcom.runtime.0.11.0.nupkg.sha512",
     "/home/dan/.nuget/packages/microsoft.data.sqlite/9.0.22/microsoft.data.sqlite.9.0.22.nupkg.sha512",
     "/home/dan/.nuget/packages/microsoft.data.sqlite.core/9.0.22/microsoft.data.sqlite.core.9.0.22.nupkg.sha512",

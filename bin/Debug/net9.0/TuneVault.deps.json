@@ -14,6 +14,7 @@
           "Avalonia.Fonts.Inter": "11.3.12",
           "Avalonia.Themes.Fluent": "11.3.12",
           "CommunityToolkit.Mvvm": "8.4.2",
+          "Material.Icons.Avalonia": "2.4.1",
           "Microsoft.Data.Sqlite": "9.0.22",
           "NAudio.Alsa": "3.3.0",
           "NAudio.Core": "3.3.0",
@@ -360,6 +361,26 @@
             "rid": "win-x86",
             "assetType": "native",
             "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "Material.Icons/2.4.1": {
+        "runtime": {
+          "lib/netstandard2.0/Material.Icons.dll": {
+            "assemblyVersion": "2.4.1.0",
+            "fileVersion": "2.4.1.0"
+          }
+        }
+      },
+      "Material.Icons.Avalonia/2.4.1": {
+        "dependencies": {
+          "Avalonia": "11.3.12",
+          "Material.Icons": "2.4.1"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Material.Icons.Avalonia.dll": {
+            "assemblyVersion": "2.4.1.0",
+            "fileVersion": "2.4.1.0"
           }
         }
       },
@@ -832,6 +853,20 @@
       "sha512": "sha512-UsJtQsfAJoFDZrXc4hCUfRPMqccfKZ0iumJ/upcUjz/cmsTgVFGNEL5yaJWmkqsuFYdMWbj/En5/kS4PFl9hBA==",
       "path": "harfbuzzsharp.nativeassets.win32/8.3.1.1",
       "hashPath": "harfbuzzsharp.nativeassets.win32.8.3.1.1.nupkg.sha512"
+    },
+    "Material.Icons/2.4.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-5/8ekF4GXqpluBF+kPfv3TytBpV5Z+h4CUU5iNCDC7+A9hPQvtn08ZUjMUXtcRGxGyfScHYDqzshzTvYiPTCdA==",
+      "path": "material.icons/2.4.1",
+      "hashPath": "material.icons.2.4.1.nupkg.sha512"
+    },
+    "Material.Icons.Avalonia/2.4.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-bJZzJCHfZDBg33ZyiSxvexMs2qMGkkv1XEgkAJkqLK9I8WNIUGLCnXcjoBrpSh2Sd2ytoD1IEjV72Zy54St3zA==",
+      "path": "material.icons.avalonia/2.4.1",
+      "hashPath": "material.icons.avalonia.2.4.1.nupkg.sha512"
     },
     "MicroCom.Runtime/0.11.0": {
       "type": "package",

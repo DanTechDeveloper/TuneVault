@@ -51,7 +51,6 @@ dotnet run --project TuneVault.csproj
 - `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations.
 - `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, and volume.
 - `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal and metadata saving.
-- `ViewModels/StatusViewModel.cs`: Shared status-bar message.
 - `Models/Track.cs`: Observable domain model for tracks.
 - `Services/`:
   - `IAudioPlayer` / `NaudioAudioPlayer`: Audio engine abstraction.

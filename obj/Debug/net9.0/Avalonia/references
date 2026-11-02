@@ -24,6 +24,8 @@
 /home/dan/.nuget/packages/avalonia.x11/11.3.12/lib/net8.0/Avalonia.X11.dll
 /home/dan/.nuget/packages/communitytoolkit.mvvm/8.4.2/lib/net8.0/CommunityToolkit.Mvvm.dll
 /home/dan/.nuget/packages/harfbuzzsharp/8.3.1.1/lib/net8.0/HarfBuzzSharp.dll
+/home/dan/.nuget/packages/material.icons.avalonia/2.4.1/lib/netstandard2.0/Material.Icons.Avalonia.dll
+/home/dan/.nuget/packages/material.icons/2.4.1/lib/netstandard2.0/Material.Icons.dll
 /home/dan/.nuget/packages/microcom.runtime/0.11.0/lib/net5.0/MicroCom.Runtime.dll
 /home/dan/.dotnet/packs/Microsoft.NETCore.App.Ref/9.0.22/ref/net9.0/Microsoft.CSharp.dll
 /home/dan/.nuget/packages/microsoft.data.sqlite.core/9.0.22/lib/net8.0/Microsoft.Data.Sqlite.dll

@@ -16,17 +16,14 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 {
     private readonly IFilePickerService _filePicker;
     private readonly LibraryViewModel _library;
-    private readonly StatusViewModel _status;
     private bool _editCoverArtChanged;
 
     public MetadataEditorViewModel(
         IFilePickerService filePicker,
-        LibraryViewModel library,
-        StatusViewModel status)
+        LibraryViewModel library)
     {
         _filePicker = filePicker;
         _library = library;
-        _status = status;
 
         _library.TrackRemoved += OnTrackRemoved;
     }
@@ -138,9 +135,8 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
             using var ms = new MemoryStream(bytes);
             EditCoverArtBitmap = new Avalonia.Media.Imaging.Bitmap(ms);
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not load image: {ex.Message}";
         }
     }
 
@@ -182,7 +178,6 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         // rewriting the audio file's tags — otherwise the file and the database diverge.
         if (await _library.IsIdentityTakenAsync(newTitle, newArtist, track.Id))
         {
-            _status.Message = "Another track already uses this title and artist.";
             return;
         }
 
@@ -239,14 +234,10 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 
         try
         {
-            _status.Message = await _library.PersistTrackAsync(track)
-                ? $"Updated metadata for \"{track.Title}\"."
-                : $"Updated metadata for \"{track.Title}\" (not linked to a file).";
+            await _library.PersistTrackAsync(track);
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message =
-                $"Updated the file's tags, but could not save to the library database: {ex.Message}";
         }
 
         IsEditMetadataModalOpen = false;

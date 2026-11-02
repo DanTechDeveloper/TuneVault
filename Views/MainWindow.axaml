@@ -6,6 +6,7 @@
         xmlns:vm="using:TuneVault.ViewModels"
         xmlns:views="using:TuneVault.Views"
         xmlns:models="using:TuneVault.Models"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         mc:Ignorable="d"
         d:DesignWidth="960"
         d:DesignHeight="620"
@@ -161,9 +162,7 @@
           
 
 <!-- NOW PLAYING PANEL -->
-<ScrollViewer Grid.Column="2">
-
-    <Border
+<Border Grid.Column="2"
         Padding="22"
         CornerRadius="18"
         Background="#FFFFFF"
@@ -174,8 +173,8 @@
 
             <!-- Album Artwork -->
             <Border
-                Width="300"
-                Height="300"
+                Width="350"
+                Height="350"
                 CornerRadius="12"
                 ClipToBounds="True"
                 Background="#F1F1F5"
@@ -237,56 +236,68 @@
                 Orientation="Horizontal"
                 HorizontalAlignment="Center"
                 Spacing="12">
-
                 <Button
-                    Content="Previous"
-                    MinWidth="85"
-                    Background="#F0F0F4"
+                    Width="48"
+                    Height="48"
+                    Padding="0"
+                    CornerRadius="24"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="Transparent"
                     Foreground="#353541"
-                    IsEnabled="False"/>
+                    IsEnabled="False"
+                    ToolTip.Tip="Previous (not available)">
+                    <materialIcons:MaterialIcon Kind="SkipPrevious" Width="30" Height="30" Foreground="#353541" />
+                </Button>
 
                 <Button
-                    Content="Play / Pause"
-                    MinWidth="120"
-                    Background="#7654D6"
-                    Foreground="#FFFFFF"
+                    Width="52"
+                    Height="52"
+                    Padding="0"
+                    CornerRadius="26"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="Transparent"
+                    Foreground="#7654D6"
                     FontWeight="SemiBold"
-                    Command="{Binding Playback.PlayPauseCommand}"/>
+                    Command="{Binding Playback.PlayTrackCommand}"
+                    ToolTip.Tip="{Binding Playback.PlayPauseToolTip}">
+                    <materialIcons:MaterialIcon Kind="{Binding Playback.PlayPauseIconKind}" Width="32" Height="32" Foreground="#7654D6" />
+                </Button>
 
                 <Button
-                    Content="Stop"
-                    MinWidth="75"
-                    Background="#F0F0F4"
+                    Width="48"
+                    Height="48"
+                    Padding="0"
+                    CornerRadius="24"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="Transparent"
                     Foreground="#353541"
-                    Command="{Binding Playback.StopCommand}"/>
+                    Command="{Binding Playback.StopCommand}"
+                    ToolTip.Tip="Stop">
+                    <materialIcons:MaterialIcon Kind="StopCircle" Width="30" Height="30" Foreground="#353541" />
+                </Button>
             </StackPanel>
 
             <!-- Volume -->
-            <Border
-                Background="#F7F7F9"
-                BorderBrush="#EBEBF0"
-                BorderThickness="1"
-                CornerRadius="10"
-                Padding="14">
+            <StackPanel Spacing="8" Margin="0,4,0,0">
 
-                <StackPanel Spacing="8">
+                <TextBlock
+                    Text="VOLUME"
+                    FontSize="10"
+                    FontWeight="Bold"
+                    Foreground="#858590"/>
 
-                    <TextBlock
-                        Text="VOLUME"
-                        FontSize="10"
-                        FontWeight="Bold"
-                        Foreground="#858590"/>
+                <Slider
+                    Minimum="0"
+                    Maximum="1"
+                    Value="{Binding Playback.Volume, Mode=TwoWay}"/>
+            </StackPanel>
 
-                    <Slider
-                        Minimum="0"
-                        Maximum="1"
-                        Value="{Binding Playback.Volume, Mode=TwoWay}"/>
-                </StackPanel>
-            </Border>
 
         </StackPanel>
     </Border>
-</ScrollViewer>
 
 
 

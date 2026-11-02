@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Material.Icons;
 
 namespace TuneVault.Models;
 
@@ -18,9 +19,11 @@ public sealed partial class Track : ObservableObject
     private string _title = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ArtistAlbum))]
     private string _artist = "Unknown artist";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ArtistAlbum))]
     private string? _album;
 
     [ObservableProperty]
@@ -54,13 +57,18 @@ public sealed partial class Track : ObservableObject
     /// model so the per-row play button can react to playback state.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PlayPauseGlyph))]
+    [NotifyPropertyChangedFor(nameof(PlayPauseIconKind))]
     [NotifyPropertyChangedFor(nameof(PlayPauseToolTip))]
     private bool _isPlaying;
 
-    public string PlayPauseGlyph => IsPlaying ? "❚❚" : "▶";
+    public MaterialIconKind PlayPauseIconKind => IsPlaying ? MaterialIconKind.PauseCircle : MaterialIconKind.PlayCircle;
 
     public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
+
+    /// <summary>Combined artist/album label for the track row.</summary>
+    public string ArtistAlbum => string.IsNullOrWhiteSpace(Album)
+        ? Artist
+        : $"{Artist} - {Album}";
 
     /// <summary>Decoded bitmap for UI binding.</summary>
     public Bitmap? CoverArt

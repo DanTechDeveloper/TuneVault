@@ -5,6 +5,7 @@
              xmlns:vm="using:TuneVault.ViewModels"
              xmlns:models="using:TuneVault.Models"
              xmlns:views="using:TuneVault.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="500"
              d:DesignHeight="500"
@@ -116,7 +117,7 @@
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"/>
 
-                            <TextBlock Text="{Binding Artist}"
+                            <TextBlock Text="{Binding ArtistAlbum}"
                                        FontSize="12"
                                        Opacity="0.65"/>
 
@@ -128,16 +129,18 @@
                         </StackPanel>
 
                         <Button Grid.Column="2"
-                                Content="{Binding PlayPauseGlyph}"
-                                Width="30"
-                                Height="30"
+                                Width="36"
+                                Height="36"
                                 Padding="0"
-                                CornerRadius="15"
+                                CornerRadius="18"
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
+                                Background="Transparent"
                                 Command="{Binding $parent[views:AllSongsView].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
                                 CommandParameter="{Binding .}"
-                                ToolTip.Tip="{Binding PlayPauseToolTip}"/>
+                                ToolTip.Tip="{Binding PlayPauseToolTip}">
+                            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="#7654D6" />
+                        </Button>
 
                         <TextBlock Grid.Column="3"
                                    Text="{Binding DurationDisplay}"

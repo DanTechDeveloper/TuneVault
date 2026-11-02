@@ -45,9 +45,8 @@ public partial class MainWindow : Window
         {
             await viewModel.Library.LoadLibraryAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            viewModel.Status.Message = $"Could not load the library database: {ex.Message}";
         }
     }
 

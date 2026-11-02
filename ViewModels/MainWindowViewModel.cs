@@ -21,13 +21,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public MainWindowViewModel(
         LibraryViewModel library,
         PlaybackViewModel playback,
-        MetadataEditorViewModel editor,
-        StatusViewModel status)
+        MetadataEditorViewModel editor)
     {
         Library = library;
         Playback = playback;
         Editor = editor;
-        Status = status;
     }
 
     public LibraryViewModel Library { get; }
@@ -35,8 +33,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public PlaybackViewModel Playback { get; }
 
     public MetadataEditorViewModel Editor { get; }
-
-    public StatusViewModel Status { get; }
 
     partial void OnCurrentTabChanged(NavigationTab value)
     {

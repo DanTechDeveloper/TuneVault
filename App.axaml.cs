@@ -28,7 +28,6 @@ public partial class App : Application
             var metadataReader = new SoundFileMetadataReader();
             var filePicker = new AvaloniaFilePickerService(() => window);
 
-            var status = new StatusViewModel();
             var repository = new SqliteLibraryRepository();
 
             // Schema creation is a few milliseconds of DDL: do it here so no command
@@ -38,15 +37,14 @@ public partial class App : Application
             {
                 Task.Run(() => repository.InitializeAsync()).GetAwaiter().GetResult();
             }
-            catch (Exception ex)
+            catch
             {
-                status.Message = $"Could not open the library database: {ex.Message}";
             }
 
-            var library = new LibraryViewModel(metadataReader, filePicker, repository, status);
-            var playback = new PlaybackViewModel(audioPlayer, library, status);
-            var editor = new MetadataEditorViewModel(filePicker, library, status);
-            var viewModel = new MainWindowViewModel(library, playback, editor, status);
+            var library = new LibraryViewModel(metadataReader, filePicker, repository);
+            var playback = new PlaybackViewModel(audioPlayer, library);
+            var editor = new MetadataEditorViewModel(filePicker, library);
+            var viewModel = new MainWindowViewModel(library, playback, editor);
 
             window = new MainWindow(viewModel);
             desktop.MainWindow = window;

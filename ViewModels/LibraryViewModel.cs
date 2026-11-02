@@ -19,7 +19,6 @@ public sealed partial class LibraryViewModel : ObservableObject
     private readonly IAudioMetadataReader _metadataReader;
     private readonly IFilePickerService _filePicker;
     private readonly ILibraryRepository _repository;
-    private readonly StatusViewModel _status;
     private Track? _pendingRemoval;
     private bool _libraryLoaded;
     private int _sortVersion;
@@ -27,13 +26,11 @@ public sealed partial class LibraryViewModel : ObservableObject
     public LibraryViewModel(
         IAudioMetadataReader metadataReader,
         IFilePickerService filePicker,
-        ILibraryRepository repository,
-        StatusViewModel status)
+        ILibraryRepository repository)
     {
         _metadataReader = metadataReader;
         _filePicker = filePicker;
         _repository = repository;
-        _status = status;
 
         Tracks = new ObservableCollection<Track>();
         Tracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTracks));
@@ -100,9 +97,8 @@ public sealed partial class LibraryViewModel : ObservableObject
 
             await ImportPathsAsync(paths);
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not open the file picker: {ex.Message}";
             IsLoading = false;
         }
     }
@@ -144,16 +140,14 @@ public sealed partial class LibraryViewModel : ObservableObject
 
             if (files.Length == 0)
             {
-                _status.Message = "No supported audio files found in selected folder.";
                 IsLoading = false;
                 return;
             }
 
             await ImportPathsAsync(files);
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not open folder picker: {ex.Message}";
             IsLoading = false;
         }
     }
@@ -196,15 +190,9 @@ public sealed partial class LibraryViewModel : ObservableObject
                 SelectedTrack = Tracks[0];
             }
 
-            _status.Message = tracks.Count == 0
-                ? "Add local audio files to start your library."
-                : missing == 0
-                    ? $"Loaded {tracks.Count} track(s)."
-                    : $"Loaded {tracks.Count} track(s); {missing} file(s) not found on disk.";
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not load the library database: {ex.Message}";
         }
         finally
         {
@@ -256,11 +244,9 @@ public sealed partial class LibraryViewModel : ObservableObject
             }
 
             SelectedTrack = Tracks.FirstOrDefault(t => t.Id == selectedId) ?? Tracks.FirstOrDefault();
-            _status.Message = $"Sorted by {SortField} ({(IsSortDescending ? "descending" : "ascending")}).";
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not sort the library: {ex.Message}";
         }
     }
 
@@ -305,9 +291,8 @@ public sealed partial class LibraryViewModel : ObservableObject
         {
             pathIndex = await _repository.LoadPathIndexAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not read the library database: {ex.Message}";
             IsLoading = false;
             return;
         }
@@ -403,9 +388,8 @@ public sealed partial class LibraryViewModel : ObservableObject
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                _status.Message = $"Could not save to the library database: {ex.Message}";
                 IsLoading = false;
                 LoadingStatusText = "";
                 return;
@@ -417,14 +401,6 @@ public sealed partial class LibraryViewModel : ObservableObject
             SelectedTrack = Tracks[0];
         }
 
-        _status.Message = (added, failed) switch
-        {
-            (0, 0) => "Those files are already in your library.",
-            (0, _) => $"Could not read {failed} file(s).",
-            (_, 0) => $"Added {added} track(s).",
-            _ => $"Added {added} track(s); {failed} could not be read.",
-        };
-
         IsLoading = false;
         LoadingStatusText = "";
         LoadingProgress = 0;
@@ -432,9 +408,7 @@ public sealed partial class LibraryViewModel : ObservableObject
         // Keep the visible order consistent with the selected sort after an import.
         if (added > 0)
         {
-            var message = _status.Message;
             await ReloadSortedAsync();
-            _status.Message = message;
         }
 
         if (duplicates.Count > 0)
@@ -502,9 +476,8 @@ public sealed partial class LibraryViewModel : ObservableObject
         {
             await _repository.DeleteAsync(track.Id);
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not remove \"{track.Title}\" from the library: {ex.Message}";
             return;
         }
 
@@ -532,7 +505,6 @@ public sealed partial class LibraryViewModel : ObservableObject
         }
 
         TrackRemoved?.Invoke(track);
-        _status.Message = $"Removed \"{track.Title}\".";
     }
 
     private static string TitleFromPath(string path)

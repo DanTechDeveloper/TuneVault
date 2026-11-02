@@ -6,19 +6,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TuneVault.Models;
 using TuneVault.Services;
+using Material.Icons;
 
 namespace TuneVault.ViewModels;
 
 /// <summary>
 /// Owns the loaded track, transport commands, progress, and volume. Reads the
-/// selected track from <see cref="LibraryViewModel"/> and writes status text
-/// through <see cref="StatusViewModel"/>.
+/// selected track from <see cref="LibraryViewModel"/>.
 /// </summary>
 public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 {
     private readonly IAudioPlayer _audioPlayer;
     private readonly LibraryViewModel _library;
-    private readonly StatusViewModel _status;
     private double _volume = 0.8;
     private Track? _loadedTrack;
     private bool _suppressSeek;
@@ -26,12 +25,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
     public PlaybackViewModel(
         IAudioPlayer audioPlayer,
-        LibraryViewModel library,
-        StatusViewModel status)
+        LibraryViewModel library)
     {
         _audioPlayer = audioPlayer;
         _library = library;
-        _status = status;
         _audioPlayer.Volume = (float)_volume;
 
         _library.PropertyChanged += OnLibraryPropertyChanged;
@@ -47,6 +44,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PlayPauseLabel))]
+    [NotifyPropertyChangedFor(nameof(PlayPauseIconKind))]
+    [NotifyPropertyChangedFor(nameof(PlayPauseToolTip))]
     private bool _isPlaying;
 
     [ObservableProperty]
@@ -60,13 +59,17 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     public string NowPlayingTitle => NowPlayingTrack?.Title ?? "Nothing playing";
 
     public string NowPlayingArtist =>
-        NowPlayingTrack?.Artist ?? "Add files, then press Play.";
+        NowPlayingTrack?.ArtistAlbum ?? "Add files, then press Play.";
 
     public Avalonia.Media.Imaging.Bitmap? NowPlayingCoverArt => NowPlayingTrack?.CoverArt;
 
     public bool HasNowPlayingCoverArt => NowPlayingTrack?.HasCoverArt ?? false;
 
     public string PlayPauseLabel => IsPlaying ? "❚❚ Pause" : "▶ Play";
+
+    public MaterialIconKind PlayPauseIconKind => IsPlaying ? MaterialIconKind.PauseCircle : MaterialIconKind.PlayCircle;
+
+    public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
 
     public string ProgressText =>
         $"{FormatTime(TimeSpan.FromSeconds(PositionSeconds))} / " +
@@ -118,7 +121,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             DurationSeconds > 0 &&
             _audioPlayer.Position >= _audioPlayer.Duration - TimeSpan.FromMilliseconds(500))
         {
-            _status.Message = $"Finished \"{_loadedTrack.Title}\".";
+            // track finished — no status message
         }
     }
 
@@ -149,14 +152,12 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         track ??= _loadedTrack ?? _library.SelectedTrack ?? _library.Tracks.FirstOrDefault();
         if (track?.FilePath is null)
         {
-            _status.Message = "No local audio file for this track.";
             return;
         }
 
         if (!File.Exists(track.FilePath))
         {
             track.IsMissing = true;
-            _status.Message = $"File not found: {track.FilePath}";
             return;
         }
 
@@ -179,28 +180,24 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 DurationSeconds = duration.TotalSeconds;
                 SetPosition(0);
                 _audioPlayer.Play();
-                _status.Message = $"Playing \"{track.Title}\".";
             }
             else
             {
                 if (_audioPlayer.IsPlaying)
                 {
                     _audioPlayer.Pause();
-                    _status.Message = $"Paused \"{track.Title}\".";
                 }
                 else
                 {
                     _audioPlayer.Play();
-                    _status.Message = $"Playing \"{track.Title}\".";
                 }
             }
 
             UpdatePlaybackState();
         }
-        catch (Exception ex)
+        catch
         {
             ClearPlaybackState();
-            _status.Message = $"Could not play \"{track.Title}\": {ex.Message}";
         }
     }
 
@@ -210,14 +207,12 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         var track = _library.SelectedTrack;
         if (track?.FilePath is null)
         {
-            _status.Message = "No local audio file for this track.";
             return;
         }
 
         if (!File.Exists(track.FilePath))
         {
             track.IsMissing = true;
-            _status.Message = $"File not found: {track.FilePath}";
             return;
         }
 
@@ -242,20 +237,17 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             if (_audioPlayer.IsPlaying)
             {
                 _audioPlayer.Pause();
-                _status.Message = $"Paused \"{track.Title}\".";
             }
             else
             {
                 _audioPlayer.Play();
-                _status.Message = $"Playing \"{track.Title}\".";
             }
 
             UpdatePlaybackState();
         }
-        catch (Exception ex)
+        catch
         {
             ClearPlaybackState();
-            _status.Message = $"Could not play \"{track.Title}\": {ex.Message}";
         }
     }
 
@@ -273,7 +265,6 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         IsPlaying = false;
         _loadedTrack.IsPlaying = false;
         SetPosition(0);
-        _status.Message = $"Stopped \"{_loadedTrack.Title}\".";
     }
 
     private bool CanStop() => _loadedTrack is not null;
@@ -289,9 +280,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             _audioPlayer.Seek(TimeSpan.FromSeconds(value));
         }
-        catch (Exception ex)
+        catch
         {
-            _status.Message = $"Could not seek: {ex.Message}";
         }
     }
 
@@ -316,6 +306,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(NowPlayingTitle));
                 break;
             case nameof(Track.Artist):
+            case nameof(Track.Album):
+            case nameof(Track.ArtistAlbum):
                 OnPropertyChanged(nameof(NowPlayingArtist));
                 break;
             case nameof(Track.CoverArt):
