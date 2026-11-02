@@ -122,6 +122,26 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
+    partial void OnSelectedArtistAlbumChanged(AlbumSummary? value)
+    {
+        // When an album is picked from the list (via SelectedItem binding),
+        // refresh the song list even though no command was invoked.
+        if (value is not null && SelectedArtist is not null)
+        {
+            ArtistSongsTitle = value.Name;
+            RefreshArtistSongs();
+        }
+    }
+
+    partial void OnIsArtistAllSongsViewChanged(bool value)
+    {
+        if (value && SelectedArtist is not null)
+        {
+            ArtistSongsTitle = $"All {SelectedArtist.Name} Songs";
+            RefreshArtistSongs();
+        }
+    }
+
     public bool IsArtistDetailView => SelectedArtist is not null;
 
     [ObservableProperty]
@@ -546,8 +566,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private void ShowAllArtistSongs()
     {
         if (SelectedArtist is null) return;
-        IsArtistAllSongsView = true;
+        // Clear album selection first so the all-songs branch is taken.
         SelectedArtistAlbum = null;
+        IsArtistAllSongsView = true;
         ArtistSongsTitle = $"All {SelectedArtist.Name} Songs";
         RefreshArtistSongs();
     }
@@ -556,8 +577,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private void SelectArtistAlbum(AlbumSummary album)
     {
         if (SelectedArtist is null) return;
-        SelectedArtistAlbum = album;
         IsArtistAllSongsView = false;
+        SelectedArtistAlbum = album;
         ArtistSongsTitle = album.Name;
         RefreshArtistSongs();
     }
