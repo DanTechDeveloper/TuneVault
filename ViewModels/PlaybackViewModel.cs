@@ -43,7 +43,6 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     private Track? _nowPlayingTrack;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PlayPauseLabel))]
     [NotifyPropertyChangedFor(nameof(PlayPauseIconKind))]
     [NotifyPropertyChangedFor(nameof(PlayPauseToolTip))]
     private bool _isPlaying;
@@ -64,8 +63,6 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     public Avalonia.Media.Imaging.Bitmap? NowPlayingCoverArt => NowPlayingTrack?.CoverArt;
 
     public bool HasNowPlayingCoverArt => NowPlayingTrack?.HasCoverArt ?? false;
-
-    public string PlayPauseLabel => IsPlaying ? "❚❚ Pause" : "▶ Play";
 
     public MaterialIconKind PlayPauseIconKind => IsPlaying ? MaterialIconKind.PauseCircle : MaterialIconKind.PlayCircle;
 

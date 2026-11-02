@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:models="using:TuneVault.Models"
+             xmlns:views="using:TuneVault.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="500"
+             d:DesignHeight="60"
+             x:Class="TuneVault.Views.TrackRow"
+             x:DataType="models:Track">
+
+    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+          ColumnSpacing="10"
+          Margin="4,6">
+        <Border Width="38"
+                Height="38"
+                CornerRadius="6"
+                ClipToBounds="True"
+                Background="#2A2A3E"
+                VerticalAlignment="Center">
+            <Panel>
+                <TextBlock Text="♫"
+                           FontSize="16"
+                           Foreground="#8888A8"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding !HasCoverArt}"/>
+                <Image Source="{Binding CoverArt}"
+                       Stretch="UniformToFill"
+                       IsVisible="{Binding HasCoverArt}"/>
+            </Panel>
+        </Border>
+
+        <StackPanel Grid.Column="1"
+                    Spacing="3"
+                    VerticalAlignment="Center">
+            <TextBlock Text="{Binding Title}"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"/>
+
+            <TextBlock Text="{Binding ArtistAlbum}"
+                       FontSize="12"
+                       Opacity="0.65"/>
+
+            <TextBlock Text="⚠ File not found"
+                       FontSize="11"
+                       Opacity="0.75"
+                       Foreground="#E0A030"
+                       IsVisible="{Binding IsMissing}"/>
+        </StackPanel>
+
+        <Button Grid.Column="2"
+                Width="36"
+                Height="36"
+                Padding="0"
+                CornerRadius="18"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Background="Transparent"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
+                CommandParameter="{Binding .}"
+                ToolTip.Tip="{Binding PlayPauseToolTip}">
+            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="#7654D6" />
+        </Button>
+
+        <TextBlock Grid.Column="3"
+                   Text="{Binding DurationDisplay}"
+                   VerticalAlignment="Center"
+                   FontSize="12"
+                   Opacity="0.65"/>
+
+        <Button Grid.Column="4"
+                Content="⋮"
+                Width="28"
+                Height="28"
+                Padding="0"
+                CornerRadius="6"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Editor.EditTrackCommand}"
+                CommandParameter="{Binding .}"
+                ToolTip.Tip="Track info and tags"/>
+    </Grid>
+</UserControl>

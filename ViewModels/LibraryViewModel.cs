@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,14 +15,17 @@ namespace TuneVault.ViewModels;
 /// <summary>
 /// Owns the in-memory track collection, selection, imports, and duplicate handling.
 /// </summary>
-public sealed partial class LibraryViewModel : ObservableObject
+public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 {
     private readonly IAudioMetadataReader _metadataReader;
     private readonly IFilePickerService _filePicker;
     private readonly ILibraryRepository _repository;
     private Track? _pendingRemoval;
     private bool _libraryLoaded;
-    private int _sortVersion;
+    private readonly SynchronizationContext? _uiContext;
+    private Timer? _searchDebounce;
+
+    private readonly List<Track> _allTracks = new();
 
     public LibraryViewModel(
         IAudioMetadataReader metadataReader,
@@ -31,14 +35,59 @@ public sealed partial class LibraryViewModel : ObservableObject
         _metadataReader = metadataReader;
         _filePicker = filePicker;
         _repository = repository;
+        _uiContext = SynchronizationContext.Current;
 
         Tracks = new ObservableCollection<Track>();
-        Tracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTracks));
+        Tracks.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasTracks));
+            OnPropertyChanged(nameof(ShowEmptyLibrary));
+            OnPropertyChanged(nameof(ShowNoResults));
+        };
+
+        Albums = new ObservableCollection<AlbumSummary>();
+        Albums.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasAlbums));
+            OnPropertyChanged(nameof(ShowAlbumsEmpty));
+        };
+
+        AlbumTracks = new ObservableCollection<Track>();
+        AlbumTracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasAlbumTracks));
     }
 
     public ObservableCollection<Track> Tracks { get; }
 
     public bool HasTracks => Tracks.Count > 0;
+
+    public ObservableCollection<AlbumSummary> Albums { get; }
+
+    public bool HasAlbums => Albums.Count > 0;
+
+    public ObservableCollection<Track> AlbumTracks { get; }
+
+    public bool HasAlbumTracks => AlbumTracks.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAlbumDetailView))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumsEmpty))]
+    private AlbumSummary? _selectedAlbum;
+
+    partial void OnSelectedAlbumChanged(AlbumSummary? value)
+    {
+        if (value is null)
+        {
+            AlbumTracks.Clear();
+        }
+        else
+        {
+            RefreshAlbumTracksView();
+        }
+    }
+
+    public bool IsAlbumDetailView => SelectedAlbum is not null;
+
+    public bool ShowAlbumsEmpty => !IsAlbumDetailView && !HasAlbums;
 
     public IReadOnlyList<TrackSortField> SortFields { get; } = Enum.GetValues<TrackSortField>();
 
@@ -47,6 +96,18 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSortDescending;
+
+    [ObservableProperty]
+    private string _searchText = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyLibrary))]
+    [NotifyPropertyChangedFor(nameof(ShowNoResults))]
+    private bool _isSearchActive;
+
+    public bool ShowEmptyLibrary => !HasTracks && !IsSearchActive;
+
+    public bool ShowNoResults => IsSearchActive && !HasTracks;
 
     public string SortDirectionLabel => IsSortDescending ? "DESC ↓" : "ASC ↑";
 
@@ -81,6 +142,9 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     /// <summary>Raised after a track has been removed from the collection.</summary>
     public event Action<Track>? TrackRemoved;
+
+    /// <summary>Raised after a search reload completes, so the shell can switch to the results view.</summary>
+    public event Action? SearchCompleted;
 
     private bool CanImport => !IsLoading;
 
@@ -171,7 +235,7 @@ public sealed partial class LibraryViewModel : ObservableObject
             LoadingProgress = 0;
             LoadingStatusText = "Loading your library...";
 
-            var tracks = await _repository.LoadAllAsync(SortField, IsSortDescending);
+            var tracks = await _repository.LoadAllAsync();
             var missing = 0;
 
             foreach (var track in tracks)
@@ -182,8 +246,11 @@ public sealed partial class LibraryViewModel : ObservableObject
                     missing++;
                 }
 
-                Tracks.Add(track);
+                _allTracks.Add(track);
             }
+
+            RefreshTracksView();
+            RefreshAlbumsView();
 
             if (SelectedTrack is null && Tracks.Count > 0)
             {
@@ -206,47 +273,103 @@ public sealed partial class LibraryViewModel : ObservableObject
     /// Re-queries the database in the selected order. Existing Track instances are
     /// reused by Id so PlaybackViewModel's loaded-track reference stays valid.
     /// </summary>
-    public async Task ReloadSortedAsync()
+    public Task ReloadSortedAsync()
     {
         if (!_libraryLoaded || IsLoading)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        var version = ++_sortVersion;
         var selectedId = SelectedTrack?.Id;
 
-        try
+        RefreshTracksView();
+        if (SelectedAlbum is not null)
         {
-            var ordered = await _repository.LoadAllAsync(SortField, IsSortDescending);
-            if (version != _sortVersion)
-            {
-                return;
-            }
-
-            var existing = Tracks.ToDictionary(t => t.Id);
-            Tracks.Clear();
-
-            foreach (var track in ordered)
-            {
-                if (existing.TryGetValue(track.Id, out var kept))
-                {
-                    Tracks.Add(kept);
-                    continue;
-                }
-
-                if (track.FilePath is null || !File.Exists(track.FilePath))
-                {
-                    track.IsMissing = true;
-                }
-
-                Tracks.Add(track);
-            }
-
-            SelectedTrack = Tracks.FirstOrDefault(t => t.Id == selectedId) ?? Tracks.FirstOrDefault();
+            RefreshAlbumTracksView();
         }
-        catch
+        RefreshAlbumsView();
+
+        SelectedTrack = Tracks.FirstOrDefault(t => t.Id == selectedId) ?? Tracks.FirstOrDefault();
+        return Task.CompletedTask;
+    }
+
+    private static string NormalizeAlbum(string? album) =>
+        string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album.Trim();
+
+    private static bool MatchesSearch(Track t, string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return true;
+        var q = term.Trim();
+        return (t.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (t.Artist?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (t.Album?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (t.Genre?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private IOrderedEnumerable<Track> SortTracks(IEnumerable<Track> source) =>
+        IsSortDescending
+            ? source.OrderByDescending(t => SortKey(t)).ThenByDescending(t => t.Title)
+            : source.OrderBy(t => SortKey(t)).ThenBy(t => t.Title);
+
+    private object? SortKey(Track t) => SortField switch
+    {
+        TrackSortField.Artist => t.Artist,
+        TrackSortField.Album => t.Album,
+        TrackSortField.Genre => t.Genre,
+        TrackSortField.Year => t.Year,
+        _ => t.Title,
+    };
+
+    private void RefreshTracksView()
+    {
+        var term = SearchText;
+        var filtered = _allTracks.Where(t => MatchesSearch(t, term));
+        var ordered = SortTracks(filtered).ToList();
+
+        var existing = Tracks.ToDictionary(t => t.Id);
+        Tracks.Clear();
+        foreach (var track in ordered)
         {
+            Tracks.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
+        }
+    }
+
+    private void RefreshAlbumsView()
+    {
+        var term = SearchText;
+        var groups = _allTracks
+            .GroupBy(t => NormalizeAlbum(t.Album))
+            .Select(g => new AlbumSummary(
+                g.Key,
+                g.Count(),
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
+            .Where(a => string.IsNullOrWhiteSpace(term)
+                        || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Albums.Clear();
+        foreach (var a in groups)
+        {
+            Albums.Add(a);
+        }
+    }
+
+    private void RefreshAlbumTracksView()
+    {
+        if (SelectedAlbum is null) return;
+        var albumName = SelectedAlbum.Name;
+        var term = SearchText;
+        var filtered = _allTracks
+            .Where(t => NormalizeAlbum(t.Album) == albumName)
+            .Where(t => MatchesSearch(t, term));
+        var ordered = SortTracks(filtered).ToList();
+
+        var existing = AlbumTracks.ToDictionary(t => t.Id);
+        AlbumTracks.Clear();
+        foreach (var track in ordered)
+        {
+            AlbumTracks.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
         }
     }
 
@@ -261,8 +384,47 @@ public sealed partial class LibraryViewModel : ObservableObject
         _ = ReloadSortedAsync();
     }
 
+    partial void OnSearchTextChanged(string value)
+    {
+        IsSearchActive = !string.IsNullOrWhiteSpace(value);
+
+        // Debounce: wait ~350ms of typing silence before hitting the database.
+        _searchDebounce?.Dispose();
+        _searchDebounce = new Timer(_ =>
+        {
+            _uiContext?.Post(async __ =>
+            {
+                await ReloadSortedAsync();
+                if (IsSearchActive)
+                {
+                    SearchCompleted?.Invoke();
+                }
+            }, null);
+        }, null, 350, Timeout.Infinite);
+    }
+
     [RelayCommand]
     private void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
+
+    [RelayCommand]
+    private void SelectAlbum(AlbumSummary album)
+    {
+        SelectedAlbum = album;
+        RefreshAlbumTracksView();
+    }
+
+    [RelayCommand]
+    private void BackToAlbums()
+    {
+        SelectedAlbum = null;
+        AlbumTracks.Clear();
+    }
+
+    public void Dispose()
+    {
+        _searchDebounce?.Dispose();
+        _searchDebounce = null;
+    }
 
     /// <summary>Writes an edited track back to the database.</summary>
     public async Task<bool> PersistTrackAsync(Track track)

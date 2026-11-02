@@ -123,6 +123,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+
         command.CommandText = $"""
             SELECT t.id, t.file_path, t.title, t.artist,
                    t.album, t.genre, t.year, t.duration_ticks, a.data

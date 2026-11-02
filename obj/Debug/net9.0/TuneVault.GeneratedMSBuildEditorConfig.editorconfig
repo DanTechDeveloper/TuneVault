@@ -43,3 +43,6 @@ build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
 [/opt/lampp/htdocs/TuneVault/Views/MainWindow.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/opt/lampp/htdocs/TuneVault/Views/TrackRow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

@@ -26,6 +26,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         Library = library;
         Playback = playback;
         Editor = editor;
+
+        Library.SearchCompleted += () => CurrentTab = NavigationTab.AllSongs;
     }
 
     public LibraryViewModel Library { get; }
@@ -58,6 +60,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Library.Dispose();
         Playback.Dispose();
     }
 }

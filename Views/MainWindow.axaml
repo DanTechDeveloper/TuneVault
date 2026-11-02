@@ -76,6 +76,16 @@
                         Padding="14,10"/>
             </StackPanel>
         </Grid>
+
+        <!-- Search Bar (after header) -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="*,Auto"
+              Margin="0,0,0,16">
+            <TextBox Text="{Binding Library.SearchText, Mode=TwoWay}"
+                     Watermark="Search title, artist, album…"
+                     HorizontalAlignment="Stretch"
+                     IsEnabled="{Binding !Library.IsLoading}"/>
+        </Grid>
         
         <!-- Main Content: Sidebar + Library + Now Playing -->
         <Grid ColumnDefinitions="170,3*,2*"
@@ -124,29 +134,32 @@
                 Margin="4,8"
                 Background="#E4E4EF"/>
 
+        <Border Height="1"
+                Margin="4,8"
+                Background="#E4E4EF"/>
+
         <TextBlock Text="SORT BY"
                    FontSize="11"
                    FontWeight="Bold"
                    Foreground="#8888A8"
                    Margin="8,0,0,4"/>
 
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+        <StackPanel Spacing="6">
 
-            <ComboBox Grid.Column="0"
-                      ItemsSource="{Binding Library.SortFields}"
+            <ComboBox ItemsSource="{Binding Library.SortFields}"
                       SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
                       HorizontalAlignment="Stretch"
                       IsEnabled="{Binding !Library.IsLoading}"/>
 
-            <Button Grid.Column="1"
-                    Content="{Binding Library.SortDirectionLabel}"
+            <Button Content="{Binding Library.SortDirectionLabel}"
                     Command="{Binding Library.ToggleSortDirectionCommand}"
+                    HorizontalAlignment="Stretch"
                     Padding="10,6"
                     HorizontalContentAlignment="Center"
                     VerticalContentAlignment="Center"
                     ToolTip.Tip="Toggle ascending / descending"
                     IsEnabled="{Binding !Library.IsLoading}"/>
-        </Grid>
+        </StackPanel>
 
     </StackPanel>
 </Border>
@@ -162,7 +175,7 @@
           
 
 <!-- NOW PLAYING PANEL -->
-<Border Grid.Column="2"
+    <Border Grid.Column="2"
         Padding="22"
         CornerRadius="18"
         Background="#FFFFFF"
@@ -173,8 +186,8 @@
 
             <!-- Album Artwork -->
             <Border
-                Width="350"
-                Height="350"
+                Width="300"
+                Height="300"
                 CornerRadius="12"
                 ClipToBounds="True"
                 Background="#F1F1F5"

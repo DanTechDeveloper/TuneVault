@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:models="using:TuneVault.Models"
+             xmlns:views="using:TuneVault.Views"
              mc:Ignorable="d"
              d:DesignWidth="500"
              d:DesignHeight="500"
@@ -24,13 +26,66 @@
             </StackPanel>
         </Grid>
 
+        <!-- Layer 1: Album list -->
+        <ScrollViewer Grid.Row="1"
+                      IsVisible="{Binding !Library.IsAlbumDetailView}">
+            <ItemsControl ItemsSource="{Binding Library.Albums}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:AlbumSummary">
+                        <Button Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Library.SelectAlbumCommand}"
+                                CommandParameter="{Binding .}"
+                                Padding="8"
+                                Margin="6"
+                                Background="Transparent"
+                                HorizontalContentAlignment="Center">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center" Width="120">
+                                <Border Width="100"
+                                        Height="100"
+                                        CornerRadius="8"
+                                        ClipToBounds="True"
+                                        Background="#2A2A3E"
+                                        HorizontalAlignment="Center">
+                                    <Panel>
+                                        <TextBlock Text="▣"
+                                                   FontSize="36"
+                                                   Foreground="#8888A8"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding !HasCoverArt}"/>
+                                        <Image Source="{Binding CoverArt}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasCoverArt}"/>
+                                    </Panel>
+                                </Border>
+                                <TextBlock Text="{Binding Name}"
+                                           FontWeight="SemiBold"
+                                           FontSize="12"
+                                           TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
+                                           FontSize="11"
+                                           Opacity="0.6"
+                                           TextAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Layer 1 empty state -->
         <Border Grid.Row="1"
                 Padding="32"
                 CornerRadius="10"
                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch">
-
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowAlbumsEmpty}">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
@@ -38,19 +93,58 @@
                            FontSize="48"
                            HorizontalAlignment="Center"
                            Opacity="0.4"/>
-
-                <TextBlock Text="Albums Collection"
+                <TextBlock Text="No albums yet"
                            FontSize="18"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
-
-                <TextBlock Text="Album grouping and cover art display will appear here."
+                <TextBlock Text="Import music to see albums here."
                            FontSize="13"
                            Opacity="0.65"
                            HorizontalAlignment="Center"
                            TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
+
+        <!-- Layer 2: filtered songs -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*"
+              IsVisible="{Binding Library.IsAlbumDetailView}">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <Button Content="← Back"
+                        Command="{Binding Library.BackToAlbumsCommand}"
+                        Padding="10,6"/>
+                <TextBlock Text="{Binding Library.SelectedAlbum.Name}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding Library.AlbumTracks}"
+                     SelectedItem="{Binding Library.SelectedTrack, Mode=TwoWay}"
+                     IsVisible="{Binding Library.HasAlbumTracks}"
+                     ItemTemplate="{StaticResource TrackRowTemplate}"/>
+
+            <Border Grid.Row="1"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding !Library.HasAlbumTracks}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No tracks"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="This album has no tracks."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
     </Grid>
 </UserControl>
