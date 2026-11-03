@@ -265,8 +265,8 @@
                     VerticalContentAlignment="Center"
                     Background="Transparent"
                     Foreground="#353541"
-                    IsEnabled="False"
-                    ToolTip.Tip="Previous (not available)">
+                    Command="{Binding Playback.PreviousCommand}"
+                    ToolTip.Tip="Previous">
                     <materialIcons:MaterialIcon Kind="SkipPrevious" Width="30" Height="30" Foreground="#353541" />
                 </Button>
 
@@ -294,9 +294,9 @@
                     VerticalContentAlignment="Center"
                     Background="Transparent"
                     Foreground="#353541"
-                    Command="{Binding Playback.StopCommand}"
-                    ToolTip.Tip="Stop">
-                    <materialIcons:MaterialIcon Kind="StopCircle" Width="30" Height="30" Foreground="#353541" />
+                    Command="{Binding Playback.NextCommand}"
+                    ToolTip.Tip="Next">
+                    <materialIcons:MaterialIcon Kind="SkipNext" Width="30" Height="30" Foreground="#353541" />
                 </Button>
             </StackPanel>
 

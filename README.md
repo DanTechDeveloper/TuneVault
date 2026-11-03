@@ -5,16 +5,19 @@ A modern, fast, and lightweight local music player desktop application built wit
 ## Features
 
 - **Local Music Playback**: Decodes WAV, MP3, FLAC, OGG/Vorbis, Opus, and AIFF audio files using native `libsndfile` decoders (`SoundFileReader`).
-- **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Artists**, and **Genres**. The Albums view is two-layer: an album list (with cover art, track counts, and an "Unknown Album" bucket) drilling into the album's filtered track list.
+- **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Album Artists**, **Artists**, and **Genres**.
+  - **Albums view**: two-layer — album list (with cover art, track counts, and an "Unknown Album" bucket) drilling into the album's filtered track list.
+  - **Album Artists view**: four-layer — artist list → artist detail (all-songs entry + album list) → all-artist-songs / album-songs, with reusable track rows.
 - **Audio File & Folder Importing**: Add individual audio files or import entire directory trees with recursive scanning.
 - **Persistent SQLite Library**: Added files and folders are stored in `library.db` under the per-user application data folder, so the library survives restarts.
 - **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
 - **Missing File Flagging**: Tracks whose file disappeared (or whose drive is offline) are flagged in the list instead of being deleted from the library.
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
+- **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
 - **Live Search**: Debounced (350ms) search bar at the top of the window filters tracks in memory by title, artist, album, and genre.
-- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs and Albums views.
-- **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for play/pause/stop/skip controls.
+- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, and Album Artists views, with a "NOW PLAYING" indicator.
+- **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for navigation, playback, and UI controls.
 - **Fluent Design System**: Responsive UI with dark/light theme adaptation using Avalonia's fluent resources and high-contrast dialog overlays.
 - **Cross-Platform Audio Architecture**: Native ALSA playback on Linux (`AlsaOut`) and WASAPI on Windows (`WasapiPlayer`).
 
@@ -39,6 +42,12 @@ dotnet build TuneVault.csproj
 dotnet run --project TuneVault.csproj
 ```
 
+### Test
+
+```bash
+cd TuneVault.Tests && dotnet test
+```
+
 ## Tech Stack
 
 - **Framework**: Avalonia UI 11 (.NET 9)
@@ -47,25 +56,28 @@ dotnet run --project TuneVault.csproj
 - **Metadata & ID3 Tags**: TagLibSharp
 - **Persistence**: SQLite via `Microsoft.Data.Sqlite`
 - **Icons**: Material.Icons.Avalonia
+- **Testing**: xUnit + Avalonia.Headless.XUnit + Moq
 
 ## Architecture & Code Structure
 
 - `Program.cs` / `App.axaml.cs`: Application entry point and composition root.
 - `ViewModels/MainWindowViewModel.cs`: Thin window shell; owns tab navigation and exposes the feature ViewModels.
-- `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations, search, and album grouping.
-- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, and volume.
+- `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations, search, album/artist grouping, and in-memory filtering.
+- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, volume, and Next/Previous navigation.
 - `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal and metadata saving.
-- `Models/Track.cs`: Observable domain model for tracks.
+- `Models/Track.cs`: Observable domain model for tracks (incl. AlbumArtist, EffectiveAlbumArtist).
 - `Models/AlbumSummary.cs`: Read-model for album tiles (name, track count, cover art).
+- `Models/ArtistSummary.cs`: Read-model for artist tiles (name, track count, cover art).
 - `Services/`:
   - `IAudioPlayer` / `NaudioAudioPlayer`: Audio engine abstraction.
-  - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser.
+  - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser (incl. AlbumArtist).
   - `IFilePickerService` / `AvaloniaFilePickerService`: Audio and image file selection.
-  - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, and schema (`~/.config/TuneVault/library.db` on Linux).
+  - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, schema v2 (incl. album_artist), and migrations.
   - `LibraryKeys`: Path/identity normalization shared by imports and the database.
 - `Views/`:
   - `MainWindow.axaml`: Main window layout with header, search bar, navigation sidebar, dynamic content, now playing sidebar, and modal overlays.
-  - `AllSongsView.axaml`, `AlbumsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.
-  - `TrackRow.axaml`: Reusable track row control shared across views.
-- `App.axaml`: Application styles and shared resources (including `TrackRowTemplate`).
+  - `AllSongsView.axaml`, `AlbumsView.axaml`, `AlbumArtistsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.
+  - `TrackRow.axaml`: Reusable track row control shared across views (cover, title, artist/album, play, duration, edit, NOW PLAYING indicator).
+- `App.axaml`: Application styles and shared resources (including `TrackRowTemplate` and `AlbumRowTemplate`).
+- `TuneVault.Tests/`: xUnit test project (Models, Services, ViewModels, Views smoke tests).
 ```

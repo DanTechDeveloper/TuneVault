@@ -68,6 +68,13 @@ public sealed partial class Track : ObservableObject
 
     public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
 
+    /// <summary>Tracks are identified by Id so selection/highlight works across views
+    /// even when different collection instances represent the same track.</summary>
+    public override bool Equals(object? obj) =>
+        obj is Track other && Id == other.Id;
+
+    public override int GetHashCode() => Id.GetHashCode();
+
     /// <summary>Combined artist/album label for the track row.</summary>
     public string ArtistAlbum => string.IsNullOrWhiteSpace(Album)
         ? Artist

@@ -109,16 +109,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         // never leaks into the newly selected artist (stale data).
         IsArtistAllSongsView = false;
         SelectedArtistAlbum = null;
-        ArtistSongs.Clear();
-        ArtistSongsTitle = string.Empty;
-
-        if (value is null)
+        if (!IsTabSwitching)
         {
             ArtistAlbums.Clear();
+            ArtistSongs.Clear();
         }
-        else
+        ArtistSongsTitle = string.Empty;
+
+        if (value is not null)
         {
             RefreshArtistAlbums();
+            // Populate ArtistSongs with ALL artist songs so the navigation
+            // queue is defined even in Layer 2 (album list).
+            RefreshArtistSongs();
         }
     }
 
@@ -165,6 +168,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _artistSongsTitle = "";
 
+    /// <summary>Set by the shell while switching tabs so drill-down state can be
+    /// reset to Layer 1 without discarding the underlying (queue-referenced)
+    /// collections.</summary>
+    public bool IsTabSwitching { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAlbumDetailView))]
     [NotifyPropertyChangedFor(nameof(ShowAlbumsEmpty))]
@@ -174,7 +182,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         if (value is null)
         {
-            AlbumTracks.Clear();
+            if (!IsTabSwitching)
+            {
+                AlbumTracks.Clear();
+            }
         }
         else
         {
@@ -350,10 +361,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             RefreshAlbumsView();
             RefreshArtistsView();
 
-            if (SelectedTrack is null && Tracks.Count > 0)
-            {
-                SelectedTrack = Tracks[0];
-            }
+            // No auto-select on initial load: the first row should not show a
+            // selection highlight until the user explicitly clicks a track.
 
         }
         catch
@@ -387,12 +396,12 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
         RefreshAlbumsView();
         RefreshArtistsView();
-        if (SelectedArtist is not null && IsArtistSongsView)
+        if (SelectedArtist is not null)
         {
             RefreshArtistSongs();
         }
 
-        SelectedTrack = Tracks.FirstOrDefault(t => t.Id == selectedId) ?? Tracks.FirstOrDefault();
+        SelectedTrack = selectedId is null ? null : Tracks.FirstOrDefault(t => t.Id == selectedId);
         return Task.CompletedTask;
     }
 
@@ -588,8 +597,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         IsArtistAllSongsView = false;
         SelectedArtistAlbum = null;
-        ArtistSongs.Clear();
         ArtistSongsTitle = string.Empty;
+        // Back to Layer 2: repopulate with all artist songs for navigation.
+        RefreshArtistSongs();
     }
 
     [RelayCommand]
@@ -789,10 +799,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             }
         }
 
-        if (SelectedTrack is null && Tracks.Count > 0)
-        {
-            SelectedTrack = Tracks[0];
-        }
+        // No auto-select after import: avoid an implicit selection highlight.
+        // The user can click a row to select + play.
 
         IsLoading = false;
         LoadingStatusText = "";

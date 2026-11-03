@@ -37,9 +37,16 @@
         <StackPanel Grid.Column="1"
                     Spacing="3"
                     VerticalAlignment="Center">
+            <TextBlock Text="▶ NOW PLAYING"
+                       FontSize="13"
+                       FontWeight="Bold"
+                       Foreground="#7654D6"
+                       IsVisible="{Binding IsPlaying}"/>
+
             <TextBlock Text="{Binding Title}"
                        FontWeight="SemiBold"
-                       TextTrimming="CharacterEllipsis"/>
+                       TextTrimming="CharacterEllipsis"
+                       Classes.playing="{Binding IsPlaying}"/>
 
             <TextBlock Text="{Binding ArtistAlbum}"
                        FontSize="12"

@@ -67,6 +67,19 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsGenresTab));
         OnPropertyChanged(nameof(CanSort));
         OnPropertyChanged(nameof(CanSortTracks));
+
+        // Reset drill-down state so switching tabs always lands on Layer 1
+        // (album/artist list) instead of retaining the last selected detail.
+        // Keep the underlying collections intact so the playback queue (which
+        // references them) keeps working after a tab switch.
+        Library.IsTabSwitching = true;
+        Library.SelectedAlbum = null;
+        Library.SelectedArtist = null;
+        // Ensure drill-down flags reset even when SelectedArtist was already null
+        // (in which case OnSelectedArtistChanged won't fire).
+        Library.SelectedArtistAlbum = null;
+        Library.IsArtistAllSongsView = false;
+        Library.IsTabSwitching = false;
     }
 
     [RelayCommand]

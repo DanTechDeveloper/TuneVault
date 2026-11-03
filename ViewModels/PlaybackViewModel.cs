@@ -118,7 +118,21 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             DurationSeconds > 0 &&
             _audioPlayer.Position >= _audioPlayer.Duration - TimeSpan.FromMilliseconds(500))
         {
-            // track finished — no status message
+            // track finished — clean up so the next click goes through the
+            // full load branch instead of the (now stale) "same track" toggle
+            try { _audioPlayer.Stop(); } catch { }
+            if (_loadedTrack is not null)
+            {
+                _loadedTrack.IsPlaying = false;
+            }
+            _loadedTrack = null;
+            IsPlaying = false;
+            // Reset slider to 0 so the state is "fresh", not stale at end.
+            _suppressSeek = true;
+            PositionSeconds = 0;
+            _suppressSeek = false;
+            StopCommand.NotifyCanExecuteChanged();
+            // keep NowPlayingTrack and DurationSeconds for display (completed state)
         }
     }
 
@@ -186,6 +200,12 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 }
                 else
                 {
+                    // If the track already finished (position at end), restart
+                    // from the beginning instead of playing from the end.
+                    if (_audioPlayer.Position >= _audioPlayer.Duration - TimeSpan.FromMilliseconds(500))
+                    {
+                        try { _audioPlayer.Seek(TimeSpan.Zero); } catch { }
+                    }
                     _audioPlayer.Play();
                 }
             }
@@ -265,6 +285,128 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     }
 
     private bool CanStop() => _loadedTrack is not null;
+
+    /// <summary>
+    /// The track list the Next/Previous buttons navigate. Picks the list the user
+    /// is currently viewing (All Songs, album detail, or artist songs) so
+    /// navigation stays within the filtered context.
+    /// </summary>
+    private System.Collections.ObjectModel.ObservableCollection<Track> CurrentQueue =>
+        _library.IsAlbumDetailView ? _library.AlbumTracks :
+        _library.IsArtistDetailView ? _library.ArtistSongs :
+        _library.Tracks; // AllSongs (default, incl. fallback for list views)
+
+    [RelayCommand]
+    private void Next()
+    {
+        var queue = CurrentQueue;
+        if (queue.Count == 0)
+        {
+            return;
+        }
+
+        // Nothing loaded yet: start playback at the selected track (or the first).
+        if (_loadedTrack is null)
+        {
+            var target = _library.SelectedTrack ?? (queue.Count > 0 ? queue[0] : null);
+            if (target is not null)
+            {
+                PlayTrack(target);
+            }
+            return;
+        }
+
+        // Match by Id (not reference) so a rebuilt collection still resolves.
+        // Fall back to the selected track, then to the first track, so Next
+        // always advances when a queue is present.
+        // Prefer the loaded track; fall back to the selected track, then to
+        // the first track, so Next always advances when a queue is present.
+        var currentIdx = -1;
+        for (var i = 0; i < queue.Count; i++)
+        {
+            if (_loadedTrack is not null && queue[i].Id == _loadedTrack.Id)
+            {
+                currentIdx = i;
+                break;
+            }
+        }
+        if (currentIdx < 0 && _library.SelectedTrack is not null)
+        {
+            for (var i = 0; i < queue.Count; i++)
+            {
+                if (queue[i].Id == _library.SelectedTrack.Id)
+                {
+                    currentIdx = i;
+                    break;
+                }
+            }
+        }
+        if (currentIdx < 0 && queue.Count > 0)
+        {
+            currentIdx = 0;
+        }
+        if (currentIdx < 0 || currentIdx + 1 >= queue.Count)
+        {
+            return; // no next track (no wrap at the boundary)
+        }
+
+        PlayTrack(queue[currentIdx + 1]);
+    }
+
+    [RelayCommand]
+    private void Previous()
+    {
+        var queue = CurrentQueue;
+        if (queue.Count == 0 || _loadedTrack is null)
+        {
+            return;
+        }
+
+        var current = _loadedTrack;
+        var idx = -1;
+        if (current is not null)
+        {
+            for (var i = 0; i < queue.Count; i++)
+            {
+                if (queue[i].Id == current.Id)
+                {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+        if (idx < 0 && _library.SelectedTrack is not null)
+        {
+            for (var i = 0; i < queue.Count; i++)
+            {
+                if (queue[i].Id == _library.SelectedTrack.Id)
+                {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+        if (idx > 0)
+        {
+            PlayTrack(queue[idx - 1]);
+            return;
+        }
+
+        // At the first track (or not found): restart the current track.
+        try
+        {
+            _audioPlayer.Seek(TimeSpan.Zero);
+        }
+        catch
+        {
+        }
+        SetPosition(0);
+        if (!_audioPlayer.IsPlaying)
+        {
+            _audioPlayer.Play();
+        }
+        UpdatePlaybackState();
+    }
 
     partial void OnPositionSecondsChanged(double value)
     {
@@ -354,6 +496,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
     private void ClearPlaybackState()
     {
+        try { _audioPlayer.Stop(); } catch { }
+
         if (_loadedTrack is not null)
         {
             _loadedTrack.IsPlaying = false;
