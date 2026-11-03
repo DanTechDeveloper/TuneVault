@@ -15,7 +15,7 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
 - **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
-- **Live Search**: Debounced (350ms) search bar at the top of the window filters tracks in memory by title, artist, album, and genre.
+- **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / album or artist songs) and never switches tabs.
 - **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, and Album Artists views, with a "NOW PLAYING" indicator.
 - **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for navigation, playback, and UI controls.
 - **Fluent Design System**: Responsive UI with dark/light theme adaptation using Avalonia's fluent resources and high-contrast dialog overlays.
