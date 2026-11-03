@@ -251,9 +251,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>Raised after a track has been removed from the collection.</summary>
     public event Action<Track>? TrackRemoved;
 
-    /// <summary>Raised after a search reload completes, so the shell can switch to the results view.</summary>
-    public event Action? SearchCompleted;
-
     private bool CanImport => !IsLoading;
 
     [RelayCommand(CanExecute = nameof(CanImport))]
@@ -403,6 +400,18 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
         SelectedTrack = selectedId is null ? null : Tracks.FirstOrDefault(t => t.Id == selectedId);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Propagates a track's playing state to every list instance that represents
+    /// the same track (by Id), so the playing row highlights consistently across
+    /// views even though each view keeps its own collection instances.
+    /// </summary>
+    public void SetTrackPlayingState(Guid trackId, bool isPlaying)
+    {
+        foreach (var t in Tracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+        foreach (var t in AlbumTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+        foreach (var t in ArtistSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
     }
 
     private static string NormalizeAlbum(string? album) =>
@@ -635,10 +644,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             _uiContext?.Post(async __ =>
             {
                 await ReloadSortedAsync();
-                if (IsSearchActive)
-                {
-                    SearchCompleted?.Invoke();
-                }
             }, null);
         }, null, 350, Timeout.Infinite);
     }

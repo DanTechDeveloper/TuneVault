@@ -103,7 +103,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         var wasPlaying = IsPlaying;
         var isPlaying = _audioPlayer.IsPlaying;
         IsPlaying = isPlaying;
-        _loadedTrack.IsPlaying = isPlaying;
+        if (_loadedTrack is not null) _library.SetTrackPlayingState(_loadedTrack.Id, isPlaying);
 
         var position = _audioPlayer.Position.TotalSeconds;
         if (Math.Abs(position - PositionSeconds) >= 0.1)
@@ -123,7 +123,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             try { _audioPlayer.Stop(); } catch { }
             if (_loadedTrack is not null)
             {
-                _loadedTrack.IsPlaying = false;
+                _library.SetTrackPlayingState(_loadedTrack.Id, false);
             }
             _loadedTrack = null;
             IsPlaying = false;
@@ -181,7 +181,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 _audioPlayer.Stop();
                 if (_loadedTrack is not null)
                 {
-                    _loadedTrack.IsPlaying = false;
+                    _library.SetTrackPlayingState(_loadedTrack.Id, false);
                 }
                 var duration = _audioPlayer.Load(track.FilePath);
 
@@ -240,7 +240,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 _audioPlayer.Stop();
                 if (_loadedTrack is not null)
                 {
-                    _loadedTrack.IsPlaying = false;
+                    _library.SetTrackPlayingState(_loadedTrack.Id, false);
                 }
                 var duration = _audioPlayer.Load(track.FilePath);
 
@@ -280,7 +280,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
         _audioPlayer.Stop();
         IsPlaying = false;
-        _loadedTrack.IsPlaying = false;
+        if (_loadedTrack is not null) _library.SetTrackPlayingState(_loadedTrack.Id, false);
         SetPosition(0);
     }
 
@@ -482,7 +482,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         IsPlaying = _audioPlayer.IsPlaying;
         if (_loadedTrack is not null)
         {
-            _loadedTrack.IsPlaying = IsPlaying;
+            _library.SetTrackPlayingState(_loadedTrack.Id, IsPlaying);
         }
         SetPosition(_audioPlayer.Position.TotalSeconds);
     }
@@ -500,7 +500,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
         if (_loadedTrack is not null)
         {
-            _loadedTrack.IsPlaying = false;
+            _library.SetTrackPlayingState(_loadedTrack.Id, false);
         }
 
         _loadedTrack = null;

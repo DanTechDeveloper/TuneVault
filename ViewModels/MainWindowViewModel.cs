@@ -37,7 +37,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         Playback = playback;
         Editor = editor;
 
-        Library.SearchCompleted += () => CurrentTab = NavigationTab.AllSongs;
         Library.PropertyChanged += OnLibraryPropertyChangedForSort;
     }
 
