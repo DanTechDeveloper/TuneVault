@@ -3,8 +3,9 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:models="using:TuneVault.Models"
              xmlns:views="using:TuneVault.Views"
+             xmlns:converters="using:TuneVault.Converters"
              x:Class="TuneVault.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Styles>
@@ -13,6 +14,16 @@
     </Application.Styles>
 
     <Application.Resources>
+        <converters:SortFieldDisplayNameConverter x:Key="SortFieldDisplayNameConverter" />
+        <!-- Slider geometry (only the progress & volume sliders exist): 7px track, 14px thumb -->
+        <x:Double x:Key="SliderTrackThemeHeight">7</x:Double>
+        <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbWidth">14</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbHeight">14</x:Double>
+        <CornerRadius x:Key="SliderThumbCornerRadius">7</CornerRadius>
+        <GridLength x:Key="SliderPreContentMargin">2</GridLength>
+        <GridLength x:Key="SliderPostContentMargin">2</GridLength>
+
         <DataTemplate x:Key="TrackRowTemplate" x:DataType="models:Track">
             <views:TrackRow />
         </DataTemplate>
@@ -26,7 +37,9 @@
                 </Border>
                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Artist}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasArtist}"/>
                     <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}" FontSize="12" Opacity="0.65"/>
+                    <TextBlock Text="{Binding Year, StringFormat='{}{0}'}" FontSize="12" Opacity="0.65" IsVisible="{Binding HasYear}"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>

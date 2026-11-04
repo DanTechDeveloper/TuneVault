@@ -135,6 +135,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             TrackSortField.Album => ("t.album COLLATE NOCASE", "CASE WHEN t.album IS NULL OR t.album = '' THEN 1 ELSE 0 END"),
             TrackSortField.Genre => ("t.genre COLLATE NOCASE", "CASE WHEN t.genre IS NULL OR t.genre = '' THEN 1 ELSE 0 END"),
             TrackSortField.Year => ("t.year", "CASE WHEN t.year = 0 THEN 1 ELSE 0 END"),
+            TrackSortField.TotalDuration => ("t.duration", "0"),
             _ => ("t.title COLLATE NOCASE", "0"),
         };
         var direction = descending ? "DESC" : "ASC";

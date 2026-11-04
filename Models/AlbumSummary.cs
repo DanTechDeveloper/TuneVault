@@ -9,9 +9,11 @@ namespace TuneVault.Models;
 /// representative cover image. Kept separate from <see cref="Track"/> so the
 /// album list can be grouped in memory without pulling full track rows.
 /// </summary>
-public sealed record AlbumSummary(string Name, int TrackCount, byte[]? PictureData)
+public sealed record AlbumSummary(string Name, int TrackCount, byte[]? PictureData, string? Artist = null, TimeSpan TotalDuration = default, int Year = 0)
 {
     public bool HasCoverArt => PictureData is { Length: > 0 };
+    public bool HasArtist => !string.IsNullOrWhiteSpace(Artist);
+    public bool HasYear => Year > 0;
 
     public Bitmap? CoverArt
     {

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Material.Icons;
@@ -68,17 +69,15 @@ public sealed partial class Track : ObservableObject
 
     public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
 
-    /// <summary>Tracks are identified by Id so selection/highlight works across views
-    /// even when different collection instances represent the same track.</summary>
-    public override bool Equals(object? obj) =>
-        obj is Track other && Id == other.Id;
-
-    public override int GetHashCode() => Id.GetHashCode();
-
     /// <summary>Combined artist/album label for the track row.</summary>
     public string ArtistAlbum => string.IsNullOrWhiteSpace(Album)
         ? Artist
         : $"{Artist} - {Album}";
+
+    /// <summary>Genre label for the track row, including year when available.</summary>
+    public string GenreDisplay =>
+        (string.IsNullOrWhiteSpace(Genre) ? "Unknown Genre" : Genre) +
+        (Year > 0 ? $" - {Year}" : string.Empty);
 
     /// <summary>Album artist for grouping, falling back to track artist when unset.</summary>
     public string EffectiveAlbumArtist => string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist!;

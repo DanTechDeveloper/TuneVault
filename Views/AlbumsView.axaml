@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:TuneVault.ViewModels"
              xmlns:models="using:TuneVault.Models"
+             xmlns:services="using:TuneVault.Services"
              xmlns:views="using:TuneVault.Views"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d"
@@ -24,6 +25,27 @@
                 <TextBlock Text="Browse your music collection by album"
                            FontSize="12"
                            Opacity="0.6"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0">
+                <ComboBox ItemsSource="{Binding Library.SortFields}"
+                          SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
+                          Width="150"
+                          IsEnabled="{Binding !Library.IsLoading}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="services:TrackSortField">
+                            <TextBlock Text="{Binding Converter={StaticResource SortFieldDisplayNameConverter}, ConverterParameter=AlbumsList}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="{Binding Library.SortDirectionLabel}"
+                        Command="{Binding Library.ToggleSortDirectionCommand}"
+                        Padding="10,6"
+                        IsEnabled="{Binding !Library.IsLoading}"/>
             </StackPanel>
         </Grid>
 
@@ -63,9 +85,20 @@
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"/>
 
+                            <TextBlock Text="{Binding Artist}"
+                                       FontSize="12"
+                                       Opacity="0.65"
+                                       TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding HasArtist}"/>
+
                             <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
                                        FontSize="12"
                                        Opacity="0.65"/>
+
+                            <TextBlock Text="{Binding Year, StringFormat='{}{0}'}"
+                                       FontSize="12"
+                                       Opacity="0.65"
+                                       IsVisible="{Binding HasYear}"/>
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
@@ -99,6 +132,37 @@
             </StackPanel>
         </Border>
 
+        <!-- Layer 1 no results -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowAlbumsNoResults}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                <TextBlock Text="No albums match your search"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Try a different search term."
+                           FontSize="13"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"/>
+                <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                        Command="{Binding Library.ClearSearchCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0"
+                        Padding="14,8"
+                        Background="#7256D9"
+                        Foreground="#FFFFFF"
+                        FontWeight="SemiBold"
+                        CornerRadius="8"/>
+            </StackPanel>
+        </Border>
+
         <!-- Layer 2: filtered songs -->
         <Grid Grid.Row="1" RowDefinitions="Auto,*"
               IsVisible="{Binding Library.IsAlbumDetailView}">
@@ -107,7 +171,7 @@
                         Padding="6"
                         Background="Transparent"
                         ToolTip.Tip="Back to albums">
-                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#353541" />
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#E8E8F0" />
                 </Button>
                 <TextBlock Text="{Binding Library.SelectedAlbum.Name}"
                            FontSize="20"
@@ -127,7 +191,7 @@
                     Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    IsVisible="{Binding !Library.HasAlbumTracks}">
+                    IsVisible="{Binding Library.ShowAlbumTracksEmpty}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="8">
@@ -139,6 +203,36 @@
                                FontSize="13"
                                Opacity="0.65"
                                HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding Library.ShowAlbumTracksNoResults}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No tracks match your search"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different search term."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                    <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                            Command="{Binding Library.ClearSearchCommand}"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            Padding="14,8"
+                            Background="#7256D9"
+                            Foreground="#FFFFFF"
+                            FontWeight="SemiBold"
+                            CornerRadius="8"/>
                 </StackPanel>
             </Border>
         </Grid>

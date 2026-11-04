@@ -12,10 +12,20 @@
              x:Class="TuneVault.Views.AllSongsView"
              x:DataType="vm:MainWindowViewModel">
 
+    <UserControl.Styles>
+        <Style Selector="ListBox ListBoxItem:selected">
+            <Setter Property="Background" Value="#2E2E42"/>
+        </Style>
+        <Style Selector="ListBox ListBoxItem:selected:focus">
+            <Setter Property="Background" Value="#2E2E42"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,*">
 
         <Grid ColumnDefinitions="*,Auto"
-              Margin="0,0,0,12">
+              Margin="0,0,0,12"
+              Background="#1E1E2E">
             <StackPanel Spacing="2">
                 <TextBlock Text="Music Library"
                            FontSize="20"
@@ -26,7 +36,20 @@
                            Opacity="0.6"/>
             </StackPanel>
 
-
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0">
+                <ComboBox ItemsSource="{Binding Library.SortFields}"
+                          SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
+                          Width="150"
+                          IsEnabled="{Binding !Library.IsLoading}"/>
+                <Button Content="{Binding Library.SortDirectionLabel}"
+                        Command="{Binding Library.ToggleSortDirectionCommand}"
+                        Padding="10,6"
+                        IsEnabled="{Binding !Library.IsLoading}"/>
+            </StackPanel>
         </Grid>
 
         <!-- Empty State Placeholder -->
@@ -61,11 +84,19 @@
                             Spacing="10"
                             HorizontalAlignment="Center"
                             Margin="0,8,0,0">
-                    <Button Content="＋ Add File(s)"
+                    <Button Content="{materialIcons:MaterialIconTextExt Kind=FileMusic, Text=Add File(s)}"
                             Command="{Binding Library.AddFilesCommand}"
+                            Background="#7256D9"
+                            Foreground="#FFFFFF"
+                            FontWeight="SemiBold"
+                            CornerRadius="8"
                             Padding="14,8"/>
-                    <Button Content="📁 Add Folder"
+                    <Button Content="{materialIcons:MaterialIconTextExt Kind=FolderMusic, Text=Add Folder}"
                             Command="{Binding Library.AddFolderCommand}"
+                            Background="#292943"
+                            Foreground="#D8D8E0"
+                            FontWeight="SemiBold"
+                            CornerRadius="8"
                             Padding="14,8"/>
                 </StackPanel>
             </StackPanel>
@@ -98,6 +129,15 @@
                            FontSize="13"
                            Opacity="0.65"
                            HorizontalAlignment="Center"/>
+                <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                        Command="{Binding Library.ClearSearchCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0"
+                        Padding="14,8"
+                        Background="#7256D9"
+                        Foreground="#FFFFFF"
+                        FontWeight="SemiBold"
+                        CornerRadius="8"/>
             </StackPanel>
         </Border>
     </Grid>

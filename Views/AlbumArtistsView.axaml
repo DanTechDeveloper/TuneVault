@@ -25,6 +25,21 @@
                            FontSize="12"
                            Opacity="0.6"/>
             </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0">
+                <ComboBox ItemsSource="{Binding Library.SortFields}"
+                          SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
+                          Width="150"
+                          IsEnabled="{Binding !Library.IsLoading}"/>
+                <Button Content="{Binding Library.SortDirectionLabel}"
+                        Command="{Binding Library.ToggleSortDirectionCommand}"
+                        Padding="10,6"
+                        IsEnabled="{Binding !Library.IsLoading}"/>
+            </StackPanel>
         </Grid>
 
         <!-- Layer 1: Artist list -->
@@ -66,6 +81,11 @@
                             <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
                                        FontSize="12"
                                        Opacity="0.65"/>
+
+                            <TextBlock Text="{Binding Year, StringFormat='{}{0}'}"
+                                       FontSize="12"
+                                       Opacity="0.65"
+                                       IsVisible="{Binding HasYear}"/>
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
@@ -99,6 +119,37 @@
             </StackPanel>
         </Border>
 
+        <!-- Layer 1 no results -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowArtistsNoResults}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                <TextBlock Text="No artists match your search"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Try a different search term."
+                           FontSize="13"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"/>
+                <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                        Command="{Binding Library.ClearSearchCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0"
+                        Padding="14,8"
+                        Background="#7256D9"
+                        Foreground="#FFFFFF"
+                        FontWeight="SemiBold"
+                        CornerRadius="8"/>
+            </StackPanel>
+        </Border>
+
         <!-- Layer 2: artist detail -->
         <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*"
               IsVisible="{Binding Library.ShowArtistDetail}">
@@ -107,7 +158,7 @@
                         Padding="6"
                         Background="Transparent"
                         ToolTip.Tip="Back to artists">
-                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#353541" />
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#E8E8F0" />
                 </Button>
                 <TextBlock Text="{Binding Library.SelectedArtist.Name}"
                            FontSize="20"
@@ -122,7 +173,7 @@
                     HorizontalContentAlignment="Left"
                     Padding="12,10"
                     Margin="0,0,0,12"
-                    Background="#F0F0F4"
+                    Background="#2A2A3E"
                     CornerRadius="6">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <materialIcons:MaterialIcon Kind="QueueMusic" Width="20" Height="20" Foreground="#7654D6" />
@@ -144,7 +195,7 @@
                     Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    IsVisible="{Binding !Library.HasArtistAlbums}">
+                    IsVisible="{Binding Library.ShowArtistAlbumsEmpty}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="8">
@@ -158,6 +209,36 @@
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
+
+            <Border Grid.Row="2"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding Library.ShowArtistAlbumsNoResults}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No albums match your search"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different search term."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                    <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                            Command="{Binding Library.ClearSearchCommand}"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            Padding="14,8"
+                            Background="#7256D9"
+                            Foreground="#FFFFFF"
+                            FontWeight="SemiBold"
+                            CornerRadius="8"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Layer 3/4: song list -->
@@ -168,7 +249,7 @@
                         Padding="6"
                         Background="Transparent"
                         ToolTip.Tip="Back to artist">
-                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#353541" />
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#E8E8F0" />
                 </Button>
                 <TextBlock Text="{Binding Library.ArtistSongsTitle}"
                            FontSize="20"
@@ -188,7 +269,7 @@
                     Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    IsVisible="{Binding !Library.HasArtistSongs}">
+                    IsVisible="{Binding Library.ShowArtistSongsEmpty}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="8">
@@ -200,6 +281,36 @@
                                FontSize="13"
                                Opacity="0.65"
                                HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Padding="32"
+                    CornerRadius="10"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsVisible="{Binding Library.ShowArtistSongsNoResults}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No tracks match your search"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different search term."
+                               FontSize="13"
+                               Opacity="0.65"
+                               HorizontalAlignment="Center"/>
+                    <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                            Command="{Binding Library.ClearSearchCommand}"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            Padding="14,8"
+                            Background="#7256D9"
+                            Foreground="#FFFFFF"
+                            FontWeight="SemiBold"
+                            CornerRadius="8"/>
                 </StackPanel>
             </Border>
         </Grid>

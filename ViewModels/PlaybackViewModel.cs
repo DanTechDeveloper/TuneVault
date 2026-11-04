@@ -58,7 +58,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     public string NowPlayingTitle => NowPlayingTrack?.Title ?? "Nothing playing";
 
     public string NowPlayingArtist =>
-        NowPlayingTrack?.ArtistAlbum ?? "Add files, then press Play.";
+        NowPlayingTrack?.ArtistAlbum ??
+        (_library.HasTracks
+            ? "Select a track, then press Play."
+            : "Add Files Or Add Folder then press play");
 
     public Avalonia.Media.Imaging.Bitmap? NowPlayingCoverArt => NowPlayingTrack?.CoverArt;
 
@@ -121,6 +124,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             // track finished — clean up so the next click goes through the
             // full load branch instead of the (now stale) "same track" toggle
             try { _audioPlayer.Stop(); } catch { }
+            _library.ClearAllPlayingState();
             if (_loadedTrack is not null)
             {
                 _library.SetTrackPlayingState(_loadedTrack.Id, false);
@@ -179,6 +183,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             if (!ReferenceEquals(_loadedTrack, track))
             {
                 _audioPlayer.Stop();
+                _library.ClearAllPlayingState();
                 if (_loadedTrack is not null)
                 {
                     _library.SetTrackPlayingState(_loadedTrack.Id, false);
@@ -238,6 +243,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             if (!ReferenceEquals(_loadedTrack, track))
             {
                 _audioPlayer.Stop();
+                _library.ClearAllPlayingState();
                 if (_loadedTrack is not null)
                 {
                     _library.SetTrackPlayingState(_loadedTrack.Id, false);
@@ -280,6 +286,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
         _audioPlayer.Stop();
         IsPlaying = false;
+        _library.ClearAllPlayingState();
         if (_loadedTrack is not null) _library.SetTrackPlayingState(_loadedTrack.Id, false);
         SetPosition(0);
     }
@@ -294,6 +301,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     private System.Collections.ObjectModel.ObservableCollection<Track> CurrentQueue =>
         _library.IsAlbumDetailView ? _library.AlbumTracks :
         _library.IsArtistDetailView ? _library.ArtistSongs :
+        _library.IsGenreSongsView ? _library.GenreSongs :
         _library.Tracks; // AllSongs (default, incl. fallback for list views)
 
     [RelayCommand]
@@ -464,6 +472,11 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             PlayPauseCommand.NotifyCanExecuteChanged();
         }
+
+        if (e.PropertyName == nameof(LibraryViewModel.HasTracks))
+        {
+            OnPropertyChanged(nameof(NowPlayingArtist));
+        }
     }
 
     private void OnTrackRemoved(Track track)
@@ -502,6 +515,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             _library.SetTrackPlayingState(_loadedTrack.Id, false);
         }
+        _library.ClearAllPlayingState();
 
         _loadedTrack = null;
         NowPlayingTrack = null;

@@ -24,6 +24,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private bool _libraryLoaded;
     private readonly SynchronizationContext? _uiContext;
     private Timer? _searchDebounce;
+    private bool _isRefreshingSummaries;
 
     private readonly List<Track> _allTracks = new();
 
@@ -50,23 +51,56 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             OnPropertyChanged(nameof(HasAlbums));
             OnPropertyChanged(nameof(ShowAlbumsEmpty));
+            OnPropertyChanged(nameof(ShowAlbumsNoResults));
         };
 
         AlbumTracks = new ObservableCollection<Track>();
-        AlbumTracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasAlbumTracks));
+        AlbumTracks.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasAlbumTracks));
+            OnPropertyChanged(nameof(ShowAlbumTracksEmpty));
+            OnPropertyChanged(nameof(ShowAlbumTracksNoResults));
+        };
 
         Artists = new ObservableCollection<ArtistSummary>();
         Artists.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasArtists));
             OnPropertyChanged(nameof(ShowArtistsEmpty));
+            OnPropertyChanged(nameof(ShowArtistsNoResults));
         };
 
         ArtistAlbums = new ObservableCollection<AlbumSummary>();
-        ArtistAlbums.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasArtistAlbums));
+        ArtistAlbums.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasArtistAlbums));
+            OnPropertyChanged(nameof(ShowArtistAlbumsEmpty));
+            OnPropertyChanged(nameof(ShowArtistAlbumsNoResults));
+        };
 
         ArtistSongs = new ObservableCollection<Track>();
-        ArtistSongs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasArtistSongs));
+        ArtistSongs.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasArtistSongs));
+            OnPropertyChanged(nameof(ShowArtistSongsEmpty));
+            OnPropertyChanged(nameof(ShowArtistSongsNoResults));
+        };
+
+        Genres = new ObservableCollection<GenreSummary>();
+        Genres.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasGenres));
+            OnPropertyChanged(nameof(ShowGenresEmpty));
+            OnPropertyChanged(nameof(ShowGenresNoResults));
+        };
+
+        GenreSongs = new ObservableCollection<Track>();
+        GenreSongs.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasGenreSongs));
+            OnPropertyChanged(nameof(ShowGenreSongsEmpty));
+            OnPropertyChanged(nameof(ShowGenreSongsNoResults));
+        };
     }
 
     public ObservableCollection<Track> Tracks { get; }
@@ -80,31 +114,74 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public ObservableCollection<Track> AlbumTracks { get; }
 
     public bool HasAlbumTracks => AlbumTracks.Count > 0;
+    public bool ShowAlbumTracksEmpty => !IsSearchActive && IsAlbumDetailView && !HasAlbumTracks;
+    public bool ShowAlbumTracksNoResults => IsSearchActive && IsAlbumDetailView && !HasAlbumTracks;
 
     public ObservableCollection<ArtistSummary> Artists { get; }
 
     public bool HasArtists => Artists.Count > 0;
 
-    public bool ShowArtistsEmpty => !IsArtistDetailView && !HasArtists;
+    public bool ShowArtistsEmpty => !IsSearchActive && !IsArtistDetailView && !HasArtists;
+    public bool ShowArtistsNoResults => IsSearchActive && !IsArtistDetailView && !HasArtists;
 
     public ObservableCollection<AlbumSummary> ArtistAlbums { get; }
 
     public bool HasArtistAlbums => ArtistAlbums.Count > 0;
+    public bool ShowArtistAlbumsEmpty => !IsSearchActive && IsArtistDetailView && !IsArtistSongsView && !HasArtistAlbums;
+    public bool ShowArtistAlbumsNoResults => IsSearchActive && IsArtistDetailView && !IsArtistSongsView && !HasArtistAlbums;
 
     public ObservableCollection<Track> ArtistSongs { get; }
 
     public bool HasArtistSongs => ArtistSongs.Count > 0;
+    public bool ShowArtistSongsEmpty => !IsSearchActive && IsArtistSongsView && !HasArtistSongs;
+    public bool ShowArtistSongsNoResults => IsSearchActive && IsArtistSongsView && !HasArtistSongs;
+
+    public ObservableCollection<GenreSummary> Genres { get; }
+
+    public bool HasGenres => Genres.Count > 0;
+
+    public ObservableCollection<Track> GenreSongs { get; }
+
+    public bool HasGenreSongs => GenreSongs.Count > 0;
+
+    public bool IsGenreSongsView => SelectedGenre is not null;
+
+    public bool ShowGenresEmpty => !IsSearchActive && !IsGenreSongsView && !HasGenres;
+    public bool ShowGenresNoResults => IsSearchActive && !IsGenreSongsView && !HasGenres;
+    public bool ShowGenreSongsEmpty => !IsSearchActive && IsGenreSongsView && !HasGenreSongs;
+    public bool ShowGenreSongsNoResults => IsSearchActive && IsGenreSongsView && !HasGenreSongs;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGenreSongsView))]
+    [NotifyPropertyChangedFor(nameof(ShowGenresEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowGenresNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowGenreSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowGenreSongsNoResults))]
+    private GenreSummary? _selectedGenre;
+
+    [ObservableProperty]
+    private string _genreSongsTitle = "";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsArtistDetailView))]
     [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
     [NotifyPropertyChangedFor(nameof(ShowArtistsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistAlbumsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistAlbumsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsNoResults))]
     [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
     [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
     private ArtistSummary? _selectedArtist;
 
     partial void OnSelectedArtistChanged(ArtistSummary? value)
     {
+        if (_isRefreshingSummaries) return;
+
+        IsArtistsTab = CurrentTab == NavigationTab.Artists;
+        IsAlbumArtistsTab = CurrentTab == NavigationTab.AlbumArtists;
+
         // Reset song-view state so a previously selected artist's title/list
         // never leaks into the newly selected artist (stale data).
         IsArtistAllSongsView = false;
@@ -122,7 +199,17 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             // Populate ArtistSongs with ALL artist songs so the navigation
             // queue is defined even in Layer 2 (album list).
             RefreshArtistSongs();
+
+            // Only the Artists (track-artist) tab lands directly on all-songs.
+            if (IsArtistsTab)
+            {
+                IsArtistAllSongsView = true;
+            }
         }
+
+        IsArtistsTab = CurrentTab == NavigationTab.Artists;
+        IsAlbumArtistsTab = CurrentTab == NavigationTab.AlbumArtists;
+        UpdateSortContext();
     }
 
     partial void OnSelectedArtistAlbumChanged(AlbumSummary? value)
@@ -134,6 +221,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             ArtistSongsTitle = value.Name;
             RefreshArtistSongs();
         }
+
+        UpdateSortContext();
     }
 
     partial void OnIsArtistAllSongsViewChanged(bool value)
@@ -143,6 +232,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             ArtistSongsTitle = $"All {SelectedArtist.Name} Songs";
             RefreshArtistSongs();
         }
+
+        UpdateSortContext();
     }
 
     public bool IsArtistDetailView => SelectedArtist is not null;
@@ -151,12 +242,16 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
     [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
     [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsNoResults))]
     private AlbumSummary? _selectedArtistAlbum;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsArtistSongsView))]
     [NotifyPropertyChangedFor(nameof(ShowArtistDetail))]
     [NotifyPropertyChangedFor(nameof(ShowArtistSongs))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsNoResults))]
     private bool _isArtistAllSongsView;
 
     public bool IsArtistSongsView => IsArtistAllSongsView || SelectedArtistAlbum is not null;
@@ -173,13 +268,64 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// collections.</summary>
     public bool IsTabSwitching { get; set; }
 
+    /// <summary>True when the active tab is the Artists (track-artist) view.
+    /// Controls whether selecting an artist lands directly on all-songs.</summary>
+    public bool IsArtistsTab { get; set; }
+
+    /// <summary>True when the active tab is the Album Artists view.</summary>
+    public bool IsAlbumArtistsTab { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SortFields))]
+    [NotifyPropertyChangedFor(nameof(SortContext))]
+    private NavigationTab _currentTab = NavigationTab.AllSongs;
+
+    private SortContext _sortContext = SortContext.AllSongsTracks;
+
+    public SortContext SortContext
+    {
+        get => _sortContext;
+        private set
+        {
+            if (_sortContext == value) return;
+            _sortContext = value;
+            OnPropertyChanged(nameof(SortContext));
+            OnPropertyChanged(nameof(SortFields));
+            var options = SortFields;
+            if (options.Count > 0 && !options.Contains(SortField))
+            {
+                SortField = options[0];
+            }
+        }
+    }
+
+    public IReadOnlyList<TrackSortField> SortFields => SortContext switch
+    {
+        SortContext.AlbumsList => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Year },
+        SortContext.ArtistsList => new[] { TrackSortField.Artist, TrackSortField.Year },
+        SortContext.AlbumArtistsList => new[] { TrackSortField.Artist, TrackSortField.Year },
+        SortContext.AlbumArtistAlbums => new[] { TrackSortField.Title, TrackSortField.Year },
+        SortContext.AlbumArtistTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+        SortContext.AlbumArtistAllTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+        SortContext.GenresList => new[] { TrackSortField.Genre, TrackSortField.Year },
+        SortContext.GenreTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Year },
+        _ => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+    };
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAlbumDetailView))]
     [NotifyPropertyChangedFor(nameof(ShowAlbumsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumTracksEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumTracksNoResults))]
     private AlbumSummary? _selectedAlbum;
 
     partial void OnSelectedAlbumChanged(AlbumSummary? value)
     {
+        if (_isRefreshingSummaries) return;
+
+        UpdateSortContext();
+
         if (value is null)
         {
             if (!IsTabSwitching)
@@ -195,9 +341,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     public bool IsAlbumDetailView => SelectedAlbum is not null;
 
-    public bool ShowAlbumsEmpty => !IsAlbumDetailView && !HasAlbums;
-
-    public IReadOnlyList<TrackSortField> SortFields { get; } = Enum.GetValues<TrackSortField>();
+    public bool ShowAlbumsEmpty => !IsSearchActive && !IsAlbumDetailView && !HasAlbums;
+    public bool ShowAlbumsNoResults => IsSearchActive && !IsAlbumDetailView && !HasAlbums;
 
     [ObservableProperty]
     private TrackSortField _sortField = TrackSortField.Title;
@@ -211,6 +356,20 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyLibrary))]
     [NotifyPropertyChangedFor(nameof(ShowNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumTracksEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowAlbumTracksNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistAlbumsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistAlbumsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowArtistSongsNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowGenresEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowGenresNoResults))]
+    [NotifyPropertyChangedFor(nameof(ShowGenreSongsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowGenreSongsNoResults))]
     private bool _isSearchActive;
 
     public bool ShowEmptyLibrary => !HasTracks && !IsSearchActive;
@@ -247,6 +406,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _deleteConfirmationMessage = "";
+
+    [ObservableProperty]
+    private bool _showToast;
+
+    [ObservableProperty]
+    private string _toastTitle = "Successfully added";
+
+    [ObservableProperty]
+    private string _toastMessage = "";
+
+    /// <summary>Cover image for the toast (file adds only; null for folders).</summary>
+    [ObservableProperty]
+    private Avalonia.Media.Imaging.Bitmap? _toastCover;
 
     /// <summary>Raised after a track has been removed from the collection.</summary>
     public event Action<Track>? TrackRemoved;
@@ -313,7 +485,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            await ImportPathsAsync(files);
+            await ImportPathsAsync(files, folder);
         }
         catch
         {
@@ -357,6 +529,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             RefreshTracksView();
             RefreshAlbumsView();
             RefreshArtistsView();
+            RefreshGenresView();
 
             // No auto-select on initial load: the first row should not show a
             // selection highlight until the user explicitly clicks a track.
@@ -397,6 +570,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             RefreshArtistSongs();
         }
+        RefreshGenresView();
+        if (SelectedGenre is not null)
+        {
+            RefreshGenreSongs();
+        }
 
         SelectedTrack = selectedId is null ? null : Tracks.FirstOrDefault(t => t.Id == selectedId);
         return Task.CompletedTask;
@@ -409,9 +587,18 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SetTrackPlayingState(Guid trackId, bool isPlaying)
     {
+        foreach (var t in _allTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in Tracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in AlbumTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in ArtistSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+    }
+
+    public void ClearAllPlayingState()
+    {
+        foreach (var t in _allTracks) t.IsPlaying = false;
+        foreach (var t in Tracks) t.IsPlaying = false;
+        foreach (var t in AlbumTracks) t.IsPlaying = false;
+        foreach (var t in ArtistSongs) t.IsPlaying = false;
     }
 
     private static string NormalizeAlbum(string? album) =>
@@ -427,6 +614,55 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             || (t.Genre?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
+    private void UpdateSortContext()
+    {
+        SortContext newContext;
+        if (SelectedAlbum is not null)
+        {
+            newContext = SortContext.AlbumTracks;
+        }
+        else if (SelectedGenre is not null)
+        {
+            newContext = SortContext.GenreTracks;
+        }
+        else if (SelectedArtist is not null)
+        {
+            if (IsArtistAllSongsView)
+            {
+                newContext = CurrentTab == NavigationTab.AlbumArtists
+                    ? SortContext.AlbumArtistAllTracks
+                    : SortContext.ArtistTracks;
+            }
+            else if (SelectedArtistAlbum is not null)
+            {
+                newContext = CurrentTab == NavigationTab.AlbumArtists
+                    ? SortContext.AlbumArtistTracks
+                    : SortContext.ArtistTracks;
+            }
+            else
+            {
+                newContext = CurrentTab == NavigationTab.AlbumArtists
+                    ? SortContext.AlbumArtistAlbums
+                    : SortContext.ArtistTracks;
+            }
+        }
+        else
+        {
+            newContext = CurrentTab switch
+            {
+                NavigationTab.Albums => SortContext.AlbumsList,
+                NavigationTab.Artists => SortContext.ArtistsList,
+                NavigationTab.AlbumArtists => SortContext.AlbumArtistsList,
+                NavigationTab.Genres => SortContext.GenresList,
+                _ => SortContext.AllSongsTracks,
+            };
+        }
+
+        SortContext = newContext;
+    }
+
+    partial void OnCurrentTabChanged(NavigationTab value) => UpdateSortContext();
+
     private IOrderedEnumerable<Track> SortTracks(IEnumerable<Track> source) =>
         IsSortDescending
             ? source.OrderByDescending(t => SortKey(t)).ThenByDescending(t => t.Title)
@@ -438,6 +674,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         TrackSortField.Album => t.Album,
         TrackSortField.Genre => t.Genre,
         TrackSortField.Year => t.Year,
+        TrackSortField.TotalDuration => t.Duration,
+        TrackSortField.TotalTracks => t.Title,
         _ => t.Title,
     };
 
@@ -460,19 +698,78 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var term = SearchText;
         var groups = _allTracks
             .GroupBy(t => NormalizeAlbum(t.Album))
-            .Select(g => new AlbumSummary(
-                g.Key,
-                g.Count(),
-                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
+            .Select(g =>
+            {
+                var artists = g.Select(t => t.Artist).Where(a => !string.IsNullOrWhiteSpace(a)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var artist = artists.Count == 1 ? artists[0]
+                    : artists.Count > 1 ? "Various Artists" : null;
+                var year = g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max();
+                return new AlbumSummary(
+                    g.Key,
+                    g.Count(),
+                    g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
+                    artist,
+                    Year: (int)year);
+            })
             .Where(a => string.IsNullOrWhiteSpace(term)
-                        || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                        || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase)
+                        || (a.Artist?.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
             .ToList();
 
-        Albums.Clear();
-        foreach (var a in groups)
+        IOrderedEnumerable<AlbumSummary> albumOrdered;
+        switch (SortField)
         {
-            Albums.Add(a);
+            case TrackSortField.Artist:
+                albumOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Artist ?? a.Name, StringComparer.OrdinalIgnoreCase)
+                    : groups.OrderBy(a => a.Artist ?? a.Name, StringComparer.OrdinalIgnoreCase);
+                break;
+            case TrackSortField.Year:
+                albumOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year);
+                break;
+            default:
+                albumOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                    : groups.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
+                break;
+        }
+
+        var selectedAlbumName = SelectedAlbum?.Name;
+        var selectedAlbumArtist = SelectedAlbum?.Artist;
+
+        _isRefreshingSummaries = true;
+        try
+        {
+            Albums.Clear();
+            foreach (var a in albumOrdered)
+            {
+                Albums.Add(a);
+            }
+
+            AlbumSummary? match = null;
+            if (selectedAlbumName is not null)
+            {
+                match = Albums.FirstOrDefault(a =>
+                    a.Name == selectedAlbumName &&
+                    (a.Artist ?? string.Empty) == (selectedAlbumArtist ?? string.Empty));
+            }
+
+            SelectedAlbum = match;
+
+            if (match is not null)
+            {
+                RefreshAlbumTracksView();
+            }
+            else if (SelectedAlbum is null && !IsTabSwitching)
+            {
+                AlbumTracks.Clear();
+            }
+        }
+        finally
+        {
+            _isRefreshingSummaries = false;
         }
     }
 
@@ -505,16 +802,154 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             .Select(g => new ArtistSummary(
                 g.Key,
                 g.Count(),
-                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
+                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max()))
             .Where(a => string.IsNullOrWhiteSpace(term)
                         || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        Artists.Clear();
-        foreach (var a in groups)
+        IOrderedEnumerable<ArtistSummary> artistOrdered;
+        switch (SortField)
         {
-            Artists.Add(a);
+            case TrackSortField.Year:
+                artistOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year);
+                break;
+            default:
+                artistOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                    : groups.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
+                break;
+        }
+
+        var selectedArtistName = SelectedArtist?.Name;
+
+        _isRefreshingSummaries = true;
+        try
+        {
+            Artists.Clear();
+            foreach (var a in artistOrdered)
+            {
+                Artists.Add(a);
+            }
+
+            ArtistSummary? match = null;
+            if (selectedArtistName is not null)
+            {
+                match = Artists.FirstOrDefault(a => a.Name == selectedArtistName);
+            }
+
+            SelectedArtist = match;
+
+            if (match is not null)
+            {
+                if (IsArtistDetailView && !IsArtistSongsView)
+                {
+                    RefreshArtistAlbums();
+                }
+                else if (IsArtistSongsView)
+                {
+                    RefreshArtistSongs();
+                }
+            }
+            else if (SelectedArtist is null && !IsTabSwitching)
+            {
+                ArtistAlbums.Clear();
+                ArtistSongs.Clear();
+                IsArtistAllSongsView = false;
+                SelectedArtistAlbum = null;
+                ArtistSongsTitle = string.Empty;
+            }
+        }
+        finally
+        {
+            _isRefreshingSummaries = false;
+        }
+    }
+
+    private static string NormalizeGenre(string? genre) =>
+        string.IsNullOrWhiteSpace(genre) ? "Unknown Genre" : genre.Trim();
+
+    private void RefreshGenresView()
+    {
+        var term = SearchText;
+        var groups = _allTracks
+            .GroupBy(t => NormalizeGenre(t.Genre))
+            .Select(g => new GenreSummary(
+                g.Key,
+                g.Count(),
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
+                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max()))
+            .Where(g => string.IsNullOrWhiteSpace(term)
+                        || g.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        IOrderedEnumerable<GenreSummary> genreOrdered;
+        switch (SortField)
+        {
+            case TrackSortField.Year:
+                genreOrdered = IsSortDescending
+                    ? groups.OrderByDescending(g => g.Year)
+                    : groups.OrderBy(g => g.Year);
+                break;
+            default:
+                genreOrdered = IsSortDescending
+                    ? groups.OrderByDescending(g => g.Name, StringComparer.OrdinalIgnoreCase)
+                    : groups.OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase);
+                break;
+        }
+
+        var selectedGenreName = SelectedGenre?.Name;
+
+        _isRefreshingSummaries = true;
+        try
+        {
+            Genres.Clear();
+            foreach (var g in genreOrdered)
+            {
+                Genres.Add(g);
+            }
+
+            GenreSummary? match = null;
+            if (selectedGenreName is not null)
+            {
+                match = Genres.FirstOrDefault(g => g.Name == selectedGenreName);
+            }
+
+            SelectedGenre = match;
+
+            if (match is not null)
+            {
+                RefreshGenreSongs();
+            }
+            else if (SelectedGenre is null && !IsTabSwitching)
+            {
+                GenreSongs.Clear();
+                GenreSongsTitle = string.Empty;
+            }
+        }
+        finally
+        {
+            _isRefreshingSummaries = false;
+        }
+    }
+
+    private void RefreshGenreSongs()
+    {
+        if (SelectedGenre is null) return;
+        var genreName = SelectedGenre.Name;
+        var term = SearchText;
+        var filtered = _allTracks
+            .Where(t => NormalizeGenre(t.Genre) == genreName)
+            .Where(t => MatchesSearch(t, term));
+        var ordered = SortTracks(filtered).ToList();
+
+        var existing = GenreSongs.ToDictionary(t => t.Id);
+        GenreSongs.Clear();
+        foreach (var track in ordered)
+        {
+            GenreSongs.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
         }
     }
 
@@ -528,12 +963,28 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             .Select(g => new AlbumSummary(
                 g.Key,
                 g.Count(),
-                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData))
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
+                artistName,
+                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max()))
             .ToList();
 
+        IOrderedEnumerable<AlbumSummary> albumOrdered;
+        switch (SortField)
+        {
+            case TrackSortField.Year:
+                albumOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year);
+                break;
+            default:
+                albumOrdered = IsSortDescending
+                    ? groups.OrderByDescending(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                    : groups.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
+                break;
+        }
+
         ArtistAlbums.Clear();
-        foreach (var a in groups)
+        foreach (var a in albumOrdered)
         {
             ArtistAlbums.Add(a);
         }
@@ -622,6 +1073,38 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         ArtistSongsTitle = string.Empty;
     }
 
+    [RelayCommand]
+    private void SelectGenre(GenreSummary genre)
+    {
+        SelectedGenre = genre;
+    }
+
+    [RelayCommand]
+    private void BackToGenres()
+    {
+        SelectedGenre = null;
+        GenreSongs.Clear();
+        GenreSongsTitle = string.Empty;
+    }
+
+    partial void OnSelectedGenreChanged(GenreSummary? value)
+    {
+        if (_isRefreshingSummaries) return;
+
+        if (!IsTabSwitching)
+        {
+            GenreSongs.Clear();
+        }
+        GenreSongsTitle = value?.Name ?? string.Empty;
+
+        if (value is not null)
+        {
+            RefreshGenreSongs();
+        }
+
+        UpdateSortContext();
+    }
+
     partial void OnSortFieldChanged(TrackSortField value)
     {
         _ = ReloadSortedAsync();
@@ -650,6 +1133,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = "";
+        _ = ReloadSortedAsync();
+    }
+
+    [RelayCommand]
+    private void ClearSearchText() => ClearSearch();
+
+    [RelayCommand]
+    private void ClearField() => ClearSearch();
 
     [RelayCommand]
     private void SelectAlbum(AlbumSummary album)
@@ -687,7 +1183,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public Task<bool> IsIdentityTakenAsync(string? title, string? artist, Guid excludeTrackId) =>
         _repository.IdentityExistsAsync(title, artist, excludeTrackId);
 
-    private async Task ImportPathsAsync(IReadOnlyList<string> paths)
+    private async Task ImportPathsAsync(IReadOnlyList<string> paths, string? importedFolder = null)
     {
         IsLoading = true;
         LoadingProgress = 0;
@@ -770,6 +1266,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         var added = 0;
+        var addedTracks = new List<Track>();
 
         if (tracks.Count > 0)
         {
@@ -784,6 +1281,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                     {
                         case AddOutcome.Added:
                             Tracks.Add(result.Track);
+                            _allTracks.Add(result.Track);
+                            addedTracks.Add(result.Track);
                             added++;
                             break;
                         case AddOutcome.DuplicatePath:
@@ -817,6 +1316,26 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             await ReloadSortedAsync();
         }
 
+        // Success toast (only when something was actually added).
+        if (added > 0)
+        {
+            if (importedFolder is not null)
+            {
+                ToastTitle = "Successfully added";
+                ToastMessage = $"Folder \"{Path.GetFileName(importedFolder)}\" added from:\n{importedFolder}";
+                ToastCover = null;
+            }
+            else
+            {
+                var first = addedTracks[0];
+                ToastTitle = "Successfully added";
+                var meta = $"\"{first.Title}\" — {first.Artist}{(string.IsNullOrWhiteSpace(first.Album) ? "" : $" • {first.Album}")}";
+                ToastMessage = added == 1 ? meta : $"{meta}  (+{added - 1} more)";
+                ToastCover = CreateToastCover(addedTracks.FirstOrDefault(t => t.PictureData is { Length: > 0 }) ?? first);
+            }
+            ShowToast = true;
+        }
+
         if (duplicates.Count > 0)
         {
             var dupList = duplicates.Distinct().ToList();
@@ -835,10 +1354,35 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
+    private static Avalonia.Media.Imaging.Bitmap? CreateToastCover(Track? track)
+    {
+        if (track?.PictureData is not { Length: > 0 } bytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var ms = new MemoryStream(bytes);
+            return new Avalonia.Media.Imaging.Bitmap(ms);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     [RelayCommand]
     private void CloseDuplicateModal()
     {
         ShowDuplicateModal = false;
+    }
+
+    [RelayCommand]
+    private void CloseToast()
+    {
+        ShowToast = false;
+        ToastCover = null;
     }
 
     [RelayCommand]
@@ -902,6 +1446,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         Tracks.Remove(track);
+        _allTracks.RemoveAll(t => t.Id == track.Id);
 
         if (wasSelected || SelectedTrack is null)
         {
@@ -918,4 +1463,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var title = Path.GetFileNameWithoutExtension(path);
         return string.IsNullOrWhiteSpace(title) ? "Untitled track" : title;
     }
+}
+
+public enum SortContext
+{
+    AllSongsTracks,
+    AlbumsList,
+    AlbumTracks,
+    ArtistsList,
+    ArtistTracks,
+    AlbumArtistsList,
+    AlbumArtistAlbums,
+    AlbumArtistTracks,
+    AlbumArtistAllTracks,
+    GenresList,
+    GenreTracks,
 }

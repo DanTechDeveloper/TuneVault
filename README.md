@@ -6,8 +6,10 @@ A modern, fast, and lightweight local music player desktop application built wit
 
 - **Local Music Playback**: Decodes WAV, MP3, FLAC, OGG/Vorbis, Opus, and AIFF audio files using native `libsndfile` decoders (`SoundFileReader`).
 - **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Album Artists**, **Artists**, and **Genres**.
-  - **Albums view**: two-layer — album list (with cover art, track counts, and an "Unknown Album" bucket) drilling into the album's filtered track list.
-  - **Album Artists view**: four-layer — artist list → artist detail (all-songs entry + album list) → all-artist-songs / album-songs, with reusable track rows.
+  - **Albums view**: two-layer — album list (with cover art, track counts, year, and an "Unknown Album" bucket) drilling into the album's filtered track list.
+  - **Album Artists view**: artist list → artist detail (all-songs entry + album list) → album songs / all-artist songs, with reusable track rows.
+  - **Artists view**: two-layer — artist list (with track counts and year) → all artist songs.
+  - **Genres view**: two-layer — genre list (with track counts and year) → all genre songs.
 - **Audio File & Folder Importing**: Add individual audio files or import entire directory trees with recursive scanning.
 - **Persistent SQLite Library**: Added files and folders are stored in `library.db` under the per-user application data folder, so the library survives restarts.
 - **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
@@ -15,8 +17,12 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
 - **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
-- **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / album or artist songs) and never switches tabs.
-- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, and Album Artists views, with a "NOW PLAYING" indicator.
+- **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.
+- **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
+- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, Album Artists, Artists, and Genres views, with a "NOW PLAYING" indicator and metadata (including year/unknown genre).
+- **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields.
+- **Clear Search & No-Results States**: When a search returns no results, views show a clarifying message and a "Clear Field" button that resets the search and restores all rows.
+- **Accurate Playback Indicators**: Track rows clear "NOW PLAYING" and revert to the play icon when a track ends or playback moves; selecting a new track marks only that row as playing.
 - **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for navigation, playback, and UI controls.
 - **Fluent Design System**: Responsive UI with dark/light theme adaptation using Avalonia's fluent resources and high-contrast dialog overlays.
 - **Cross-Platform Audio Architecture**: Native ALSA playback on Linux (`AlsaOut`) and WASAPI on Windows (`WasapiPlayer`).

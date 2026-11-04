@@ -14,7 +14,8 @@
 
     <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
           ColumnSpacing="10"
-          Margin="4,6">
+          Margin="4,6"
+         >
         <Border Width="38"
                 Height="38"
                 CornerRadius="6"
@@ -40,7 +41,7 @@
             <TextBlock Text="▶ NOW PLAYING"
                        FontSize="13"
                        FontWeight="Bold"
-                       Foreground="#7654D6"
+                       Foreground="#00FF2F"
                        IsVisible="{Binding IsPlaying}"/>
 
             <TextBlock Text="{Binding Title}"
@@ -51,6 +52,11 @@
             <TextBlock Text="{Binding ArtistAlbum}"
                        FontSize="12"
                        Opacity="0.65"/>
+
+            <TextBlock Text="{Binding GenreDisplay}"
+                       FontSize="11"
+                       Opacity="0.5"
+                       TextTrimming="CharacterEllipsis"/>
 
             <TextBlock Text="⚠ File not found"
                        FontSize="11"
@@ -70,7 +76,7 @@
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
                 CommandParameter="{Binding .}"
                 ToolTip.Tip="{Binding PlayPauseToolTip}">
-            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="#7654D6" />
+            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="#ffffffff" Background="Transparent" />
         </Button>
 
         <TextBlock Grid.Column="3"

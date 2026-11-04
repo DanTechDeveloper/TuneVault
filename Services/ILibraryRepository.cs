@@ -22,6 +22,8 @@ public enum TrackSortField
     Album,
     Genre,
     Year,
+    TotalDuration,
+    TotalTracks,
 }
 
 /// <summary>Result of persisting one track, used to report duplicates and failures.</summary>

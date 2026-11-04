@@ -141,7 +141,7 @@ public class PlaybackViewModelTests
         {
             var player = new Mock<IAudioPlayer>();
             var vm = new PlaybackViewModel(player.Object, library);
-            Assert.Equal("Add files, then press Play.", vm.NowPlayingArtist);
+            Assert.Equal("Add Files Or Add Folder then press play", vm.NowPlayingArtist);
         }
         finally { Cleanup(dbPath); }
     }

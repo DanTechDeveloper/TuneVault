@@ -21,9 +21,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsGenresTab => CurrentTab == NavigationTab.Genres;
 
     /// <summary>True when the active view has a sortable track list.</summary>
-    public bool CanSort => IsAllSongsTab
-        || (IsAlbumsTab && Library.IsAlbumDetailView)
-        || (IsAlbumArtists && Library.IsArtistSongsView);
+    public bool CanSort => true;
 
     /// <summary>CanSort combined with not-loading, for binding to IsEnabled.</summary>
     public bool CanSortTracks => CanSort && !Library.IsLoading;
@@ -44,7 +42,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (e.PropertyName == nameof(LibraryViewModel.IsLoading) ||
             e.PropertyName == nameof(LibraryViewModel.IsAlbumDetailView) ||
-            e.PropertyName == nameof(LibraryViewModel.IsArtistSongsView))
+            e.PropertyName == nameof(LibraryViewModel.IsArtistSongsView) ||
+            e.PropertyName == nameof(LibraryViewModel.IsGenreSongsView))
         {
             OnPropertyChanged(nameof(CanSort));
             OnPropertyChanged(nameof(CanSortTracks));
@@ -72,8 +71,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         // Keep the underlying collections intact so the playback queue (which
         // references them) keeps working after a tab switch.
         Library.IsTabSwitching = true;
+        Library.IsArtistsTab = value == NavigationTab.Artists;
+        Library.IsAlbumArtistsTab = value == NavigationTab.AlbumArtists;
+        Library.CurrentTab = value;
         Library.SelectedAlbum = null;
         Library.SelectedArtist = null;
+        Library.SelectedGenre = null;
         // Ensure drill-down flags reset even when SelectedArtist was already null
         // (in which case OnSelectedArtistChanged won't fire).
         Library.SelectedArtistAlbum = null;
