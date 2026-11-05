@@ -11,9 +11,58 @@
     <Application.Styles>
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
+        <Style Selector="ListBox ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}"/>
+        </Style>
+        <Style Selector="ListBox ListBoxItem:selected:focus">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}"/>
+        </Style>
     </Application.Styles>
 
     <Application.Resources>
+        <!-- Design tokens: colors (literals; do not migrate these definitions) -->
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1A1A24"/>
+        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#1E1E2E"/>
+        <SolidColorBrush x:Key="ElevatedBackgroundBrush" Color="#2A2A3E"/>
+        <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#292943"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#7256D9"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#8368E8"/>
+        <SolidColorBrush x:Key="DangerBrush" Color="#C0392B"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B8B8CC"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#8888A8"/>
+        <SolidColorBrush x:Key="BorderSubtleBrush" Color="#333344"/>
+        <SolidColorBrush x:Key="SelectedRowBrush" Color="#2E2E42"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#2ECC71"/>
+        <SolidColorBrush x:Key="MissingFileBrush" Color="#E0A030"/>
+        <SolidColorBrush x:Key="NowPlayingBrush" Color="#00FF2F"/>
+        <SolidColorBrush x:Key="ScrimBrush" Color="#88000000"/>
+        <!-- Design tokens: spacing -->
+        <x:Double x:Key="SpacingXs">4</x:Double>
+        <x:Double x:Key="SpacingSm">8</x:Double>
+        <x:Double x:Key="SpacingMd">12</x:Double>
+        <x:Double x:Key="SpacingLg">16</x:Double>
+        <x:Double x:Key="SpacingXl">24</x:Double>
+        <x:Double x:Key="SpacingXxl">32</x:Double>
+        <!-- Design tokens: corner radius -->
+        <CornerRadius x:Key="RadiusSm">6</CornerRadius>
+        <CornerRadius x:Key="RadiusMd">8</CornerRadius>
+        <CornerRadius x:Key="RadiusLg">10</CornerRadius>
+        <CornerRadius x:Key="RadiusXl">12</CornerRadius>
+        <CornerRadius x:Key="RadiusPill">18</CornerRadius>
+        <!-- Design tokens: typography scale -->
+        <x:Double x:Key="FontSizeXs">10</x:Double>
+        <x:Double x:Key="FontSizeSm">11</x:Double>
+        <x:Double x:Key="FontSizeSmMd">12</x:Double>
+        <x:Double x:Key="FontSizeMd">13</x:Double>
+        <x:Double x:Key="FontSizeLg">16</x:Double>
+        <x:Double x:Key="FontSizeHeading">18</x:Double>
+        <x:Double x:Key="FontSizeXl">20</x:Double>
+        <x:Double x:Key="FontSizeHero">21</x:Double>
+        <x:Double x:Key="FontSizeDisplay">30</x:Double>
+        <FontFamily x:Key="AppFontFamily">Inter, Segoe UI, system-ui, sans-serif</FontFamily>
+
         <converters:SortFieldDisplayNameConverter x:Key="SortFieldDisplayNameConverter" />
         <!-- Slider geometry (only the progress & volume sliders exist): 7px track, 14px thumb -->
         <x:Double x:Key="SliderTrackThemeHeight">7</x:Double>
@@ -29,17 +78,17 @@
         </DataTemplate>
         <DataTemplate x:Key="AlbumRowTemplate" x:DataType="models:AlbumSummary">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="4,6">
-                <Border Width="38" Height="38" CornerRadius="6" ClipToBounds="True" Background="#2A2A3E" VerticalAlignment="Center">
+                <Border Width="38" Height="38" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource ElevatedBackgroundBrush}" VerticalAlignment="Center">
                     <Panel>
-                        <TextBlock Text="▣" FontSize="16" Foreground="#8888A8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasCoverArt}"/>
+                        <materialIcons:MaterialIcon Kind="Album" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasCoverArt}"/>
                         <Image Source="{Binding CoverArt}" Stretch="UniformToFill" IsVisible="{Binding HasCoverArt}"/>
                     </Panel>
                 </Border>
                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding Artist}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasArtist}"/>
-                    <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}" FontSize="12" Opacity="0.65"/>
-                    <TextBlock Text="{Binding Year, StringFormat='{}{0}'}" FontSize="12" Opacity="0.65" IsVisible="{Binding HasYear}"/>
+                    <TextBlock Text="{Binding Artist}" FontSize="{StaticResource FontSizeSmMd}" Opacity="0.65" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasArtist}"/>
+                    <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}" FontSize="{StaticResource FontSizeSmMd}" Opacity="0.65"/>
+                    <TextBlock Text="{Binding Year, StringFormat='{}{0}'}" FontSize="{StaticResource FontSizeSmMd}" Opacity="0.65" IsVisible="{Binding HasYear}"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>

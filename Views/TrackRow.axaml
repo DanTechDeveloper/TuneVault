@@ -20,15 +20,16 @@
                 Height="38"
                 CornerRadius="6"
                 ClipToBounds="True"
-                Background="#2A2A3E"
+                Background="{DynamicResource ElevatedBackgroundBrush}"
                 VerticalAlignment="Center">
             <Panel>
-                <TextBlock Text="♫"
-                           FontSize="16"
-                           Foreground="#8888A8"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           IsVisible="{Binding !HasCoverArt}"/>
+                <materialIcons:MaterialIcon Kind="MusicNote"
+                                           Width="16"
+                                           Height="16"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !HasCoverArt}"/>
                 <Image Source="{Binding CoverArt}"
                        Stretch="UniformToFill"
                        IsVisible="{Binding HasCoverArt}"/>
@@ -39,9 +40,9 @@
                     Spacing="3"
                     VerticalAlignment="Center">
             <TextBlock Text="▶ NOW PLAYING"
-                       FontSize="13"
+                       FontSize="{StaticResource FontSizeMd}"
                        FontWeight="Bold"
-                       Foreground="#00FF2F"
+                       Foreground="{DynamicResource NowPlayingBrush}"
                        IsVisible="{Binding IsPlaying}"/>
 
             <TextBlock Text="{Binding Title}"
@@ -50,18 +51,18 @@
                        Classes.playing="{Binding IsPlaying}"/>
 
             <TextBlock Text="{Binding ArtistAlbum}"
-                       FontSize="12"
+                       FontSize="{StaticResource FontSizeSmMd}"
                        Opacity="0.65"/>
 
             <TextBlock Text="{Binding GenreDisplay}"
-                       FontSize="11"
+                       FontSize="{StaticResource FontSizeSm}"
                        Opacity="0.5"
                        TextTrimming="CharacterEllipsis"/>
 
             <TextBlock Text="⚠ File not found"
-                       FontSize="11"
+                       FontSize="{StaticResource FontSizeSm}"
                        Opacity="0.75"
-                       Foreground="#E0A030"
+                       Foreground="{DynamicResource MissingFileBrush}"
                        IsVisible="{Binding IsMissing}"/>
         </StackPanel>
 
@@ -76,13 +77,13 @@
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
                 CommandParameter="{Binding .}"
                 ToolTip.Tip="{Binding PlayPauseToolTip}">
-            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="#ffffffff" Background="Transparent" />
+            <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}" Background="Transparent" />
         </Button>
 
         <TextBlock Grid.Column="3"
                    Text="{Binding DurationDisplay}"
                    VerticalAlignment="Center"
-                   FontSize="12"
+                   FontSize="{StaticResource FontSizeSmMd}"
                    Opacity="0.65"/>
 
         <Button Grid.Column="4"

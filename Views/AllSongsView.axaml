@@ -12,27 +12,18 @@
              x:Class="TuneVault.Views.AllSongsView"
              x:DataType="vm:MainWindowViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="ListBox ListBoxItem:selected">
-            <Setter Property="Background" Value="#2E2E42"/>
-        </Style>
-        <Style Selector="ListBox ListBoxItem:selected:focus">
-            <Setter Property="Background" Value="#2E2E42"/>
-        </Style>
-    </UserControl.Styles>
-
     <Grid RowDefinitions="Auto,*">
 
         <Grid ColumnDefinitions="*,Auto"
               Margin="0,0,0,12"
-              Background="#1E1E2E">
+              Background="{DynamicResource PanelBackgroundBrush}">
             <StackPanel Spacing="2">
                 <TextBlock Text="Music Library"
-                           FontSize="20"
+                           FontSize="{StaticResource FontSizeXl}"
                            FontWeight="SemiBold"/>
 
                 <TextBlock Text="{Binding Library.Tracks.Count, StringFormat='{}{0} tracks'}"
-                           FontSize="12"
+                           FontSize="{StaticResource FontSizeSmMd}"
                            Opacity="0.6"/>
             </StackPanel>
 
@@ -64,18 +55,19 @@
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
-                <TextBlock Text="♫"
-                           FontSize="48"
-                           HorizontalAlignment="Center"
-                           Opacity="0.4"/>
+                <materialIcons:MaterialIcon Kind="MusicNote"
+                                           Width="48"
+                                           Height="48"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.4"/>
 
                 <TextBlock Text="Your library is empty"
-                           FontSize="18"
+                           FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
 
                 <TextBlock Text="Add individual audio files or import an entire folder with songs."
-                           FontSize="13"
+                           FontSize="{StaticResource FontSizeMd}"
                            Opacity="0.65"
                            HorizontalAlignment="Center"
                            TextWrapping="Wrap"/>
@@ -86,15 +78,15 @@
                             Margin="0,8,0,0">
                     <Button Content="{materialIcons:MaterialIconTextExt Kind=FileMusic, Text=Add File(s)}"
                             Command="{Binding Library.AddFilesCommand}"
-                            Background="#7256D9"
-                            Foreground="#FFFFFF"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
                             FontWeight="SemiBold"
                             CornerRadius="8"
                             Padding="14,8"/>
                     <Button Content="{materialIcons:MaterialIconTextExt Kind=FolderMusic, Text=Add Folder}"
                             Command="{Binding Library.AddFolderCommand}"
-                            Background="#292943"
-                            Foreground="#D8D8E0"
+                            Background="{DynamicResource SidebarBackgroundBrush}"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
                             FontWeight="SemiBold"
                             CornerRadius="8"
                             Padding="14,8"/>
@@ -122,11 +114,11 @@
                         VerticalAlignment="Center"
                         Spacing="8">
                 <TextBlock Text="No results found"
-                           FontSize="18"
+                           FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Try a different search term."
-                           FontSize="13"
+                           FontSize="{StaticResource FontSizeMd}"
                            Opacity="0.65"
                            HorizontalAlignment="Center"/>
                 <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
@@ -134,8 +126,8 @@
                         HorizontalAlignment="Center"
                         Margin="0,8,0,0"
                         Padding="14,8"
-                        Background="#7256D9"
-                        Foreground="#FFFFFF"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         FontWeight="SemiBold"
                         CornerRadius="8"/>
             </StackPanel>

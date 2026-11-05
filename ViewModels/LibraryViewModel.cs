@@ -591,6 +591,35 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         foreach (var t in Tracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in AlbumTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in ArtistSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+        foreach (var t in GenreSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+    }
+
+    /// <summary>
+    /// Propagates an edited track's fields to every list instance that represents
+    /// the same track (by Id), so rows in all views reflect the edit without a
+    /// manual reload. Collections may hold distinct instances of the same logical
+    /// track, so mutate each one in place.
+    /// </summary>
+    public void ApplyTrackMetadata(Track source)
+    {
+        var seen = new HashSet<Track>(ReferenceEqualityComparer.Instance);
+        var targets = _allTracks.Where(t => t.Id == source.Id)
+            .Concat(Tracks.Where(t => t.Id == source.Id))
+            .Concat(AlbumTracks.Where(t => t.Id == source.Id))
+            .Concat(ArtistSongs.Where(t => t.Id == source.Id))
+            .Concat(GenreSongs.Where(t => t.Id == source.Id));
+        foreach (var t in targets)
+        {
+            if (!seen.Add(t)) continue;
+            if (ReferenceEquals(t, source)) continue;
+            t.Title = source.Title;
+            t.Artist = source.Artist;
+            t.Album = source.Album;
+            t.Genre = source.Genre;
+            t.Year = source.Year;
+            t.PictureData = source.PictureData;
+            t.IsMissing = source.IsMissing;
+        }
     }
 
     public void ClearAllPlayingState()
@@ -599,6 +628,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         foreach (var t in Tracks) t.IsPlaying = false;
         foreach (var t in AlbumTracks) t.IsPlaying = false;
         foreach (var t in ArtistSongs) t.IsPlaying = false;
+        foreach (var t in GenreSongs) t.IsPlaying = false;
     }
 
     private static string NormalizeAlbum(string? album) =>

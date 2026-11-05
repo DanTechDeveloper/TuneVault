@@ -19,11 +19,11 @@
               Margin="0,0,0,12">
             <StackPanel Spacing="2">
                 <TextBlock Text="Albums"
-                           FontSize="20"
+                           FontSize="{StaticResource FontSizeXl}"
                            FontWeight="SemiBold"/>
 
                 <TextBlock Text="Browse your music collection by album"
-                           FontSize="12"
+                           FontSize="{StaticResource FontSizeSmMd}"
                            Opacity="0.6"/>
             </StackPanel>
 
@@ -63,15 +63,16 @@
                                 Height="38"
                                 CornerRadius="6"
                                 ClipToBounds="True"
-                                Background="#2A2A3E"
+                                Background="{DynamicResource ElevatedBackgroundBrush}"
                                 VerticalAlignment="Center">
                             <Panel>
-                                <TextBlock Text="▣"
-                                           FontSize="16"
-                                           Foreground="#8888A8"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding !HasCoverArt}"/>
+                                <materialIcons:MaterialIcon Kind="Album"
+                                                           Width="16"
+                                                           Height="16"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding !HasCoverArt}"/>
                                 <Image Source="{Binding CoverArt}"
                                        Stretch="UniformToFill"
                                        IsVisible="{Binding HasCoverArt}"/>
@@ -86,17 +87,17 @@
                                        TextTrimming="CharacterEllipsis"/>
 
                             <TextBlock Text="{Binding Artist}"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSizeSmMd}"
                                        Opacity="0.65"
                                        TextTrimming="CharacterEllipsis"
                                        IsVisible="{Binding HasArtist}"/>
 
                             <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSizeSmMd}"
                                        Opacity="0.65"/>
 
                             <TextBlock Text="{Binding Year, StringFormat='{}{0}'}"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSizeSmMd}"
                                        Opacity="0.65"
                                        IsVisible="{Binding HasYear}"/>
                         </StackPanel>
@@ -116,16 +117,17 @@
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
-                <TextBlock Text="▣"
-                           FontSize="48"
-                           HorizontalAlignment="Center"
-                           Opacity="0.4"/>
+                <materialIcons:MaterialIcon Kind="Album"
+                                           Width="48"
+                                           Height="48"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.4"/>
                 <TextBlock Text="No albums yet"
-                           FontSize="18"
+                           FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Import music to see albums here."
-                           FontSize="13"
+                           FontSize="{StaticResource FontSizeMd}"
                            Opacity="0.65"
                            HorizontalAlignment="Center"
                            TextWrapping="Wrap"/>
@@ -144,11 +146,11 @@
                         VerticalAlignment="Center"
                         Spacing="8">
                 <TextBlock Text="No albums match your search"
-                           FontSize="18"
+                           FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Try a different search term."
-                           FontSize="13"
+                           FontSize="{StaticResource FontSizeMd}"
                            Opacity="0.65"
                            HorizontalAlignment="Center"/>
                 <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
@@ -156,8 +158,8 @@
                         HorizontalAlignment="Center"
                         Margin="0,8,0,0"
                         Padding="14,8"
-                        Background="#7256D9"
-                        Foreground="#FFFFFF"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         FontWeight="SemiBold"
                         CornerRadius="8"/>
             </StackPanel>
@@ -171,10 +173,10 @@
                         Padding="6"
                         Background="Transparent"
                         ToolTip.Tip="Back to albums">
-                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="#E8E8F0" />
+                    <materialIcons:MaterialIcon Kind="ArrowBack" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" />
                 </Button>
                 <TextBlock Text="{Binding Library.SelectedAlbum.Name}"
-                           FontSize="20"
+                           FontSize="{StaticResource FontSizeXl}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
             </StackPanel>
@@ -196,11 +198,11 @@
                             VerticalAlignment="Center"
                             Spacing="8">
                     <TextBlock Text="No tracks"
-                               FontSize="18"
+                               FontSize="{StaticResource FontSizeHeading}"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="This album has no tracks."
-                               FontSize="13"
+                               FontSize="{StaticResource FontSizeMd}"
                                Opacity="0.65"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
@@ -217,11 +219,11 @@
                             VerticalAlignment="Center"
                             Spacing="8">
                     <TextBlock Text="No tracks match your search"
-                               FontSize="18"
+                               FontSize="{StaticResource FontSizeHeading}"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Try a different search term."
-                               FontSize="13"
+                               FontSize="{StaticResource FontSizeMd}"
                                Opacity="0.65"
                                HorizontalAlignment="Center"/>
                     <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
@@ -229,8 +231,8 @@
                             HorizontalAlignment="Center"
                             Margin="0,8,0,0"
                             Padding="14,8"
-                            Background="#7256D9"
-                            Foreground="#FFFFFF"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
                             FontWeight="SemiBold"
                             CornerRadius="8"/>
                 </StackPanel>

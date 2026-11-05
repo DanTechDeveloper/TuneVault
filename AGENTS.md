@@ -49,6 +49,7 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - `AlbumRowTemplate` in `App.axaml` renders album tiles.
 - Google Material Icons via `Material.Icons.Avalonia` 2.4.1; styles registered in `App.axaml`. Button backgrounds are transparent for icon-only buttons.
 - Sort controls live in each view header and are context-aware through `Library.SortFields`/`Library.SortContext`.
+- `App.axaml` holds design tokens (colors, spacing, radius, typography, `AppFontFamily`). Views should use `{DynamicResource ...Brush}` for colors and `{StaticResource FontSize...}` for text sizes; spacing/radius are mostly literals (Avalonia `Thickness`/`CornerRadius` don't accept `x:Double` tokens).
 
 ## Playback navigation
 
@@ -73,10 +74,14 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 
 ## Gotchas
 
-- `_allTracks` is the source for in-memory rebuilds. `SetTrackPlayingState` must update it too, and `Remove` must drop the track from it, or stale rows/reappearances occur.
+- `_allTracks` is the source for in-memory rebuilds. `SetTrackPlayingState` must update it too, and `Remove` must drop the track from it, or stale rows/reappearances occur. `GenreSongs` is included in playing-state sync.
 - `ClearAllPlayingState()` (LibraryViewModel) clears `IsPlaying` on every track instance held anywhere; call it on playback transitions to avoid stale "NOW PLAYING" indicators.
 - Summary collections are immutable records rebuilt on refresh; reselect by key instead of reusing instances.
 - `TrackRow` uses `$parent[Window]` to reach `MainWindowViewModel`; if it fails at runtime, resolve the Window DataContext in code-behind.
 - Search has no-results borders with a "Clear Field" button (`ClearSearchCommand`, aliases `ClearSearchText`/`ClearField`) in All Songs/Albums/Album Artists/Artists/Genres views.
 - App theme is set to `Dark` in `App.axaml`.
 - Do not edit generated `obj/`/`bin/` artifacts.
+- `Track` overrides `Equals`/`GetHashCode` by `Id`, so `ListBox` selection matches across collection instances (All Songs vs filtered tabs). `ApplyTrackMetadata` (LibraryViewModel) propagates edits to every instance of a track; call it after mutating a track or rows go stale.
+- Global `FontFamily` is set via `MainWindow.FontFamily` (not `Application.Styles` — `Control` base lacks `FontFamily` for grouped selectors). Views inherit it.
+- Use `{DynamicResource ...}` (not `{StaticResource}`) for token lookups inside views/styles; `StaticResource` fails at runtime in those contexts.
+- Modal scrims use `#88000000` for text readability over any cover art; slider track/thumb use `#40FFFFFF`/`#FFFFFF`.

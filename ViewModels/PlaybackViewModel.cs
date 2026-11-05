@@ -48,11 +48,11 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     private bool _isPlaying;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ProgressText))]
+    [NotifyPropertyChangedFor(nameof(PositionText))]
     private double _positionSeconds;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ProgressText))]
+    [NotifyPropertyChangedFor(nameof(DurationText))]
     private double _durationSeconds;
 
     public string NowPlayingTitle => NowPlayingTrack?.Title ?? "Nothing playing";
@@ -71,9 +71,9 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
     public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
 
-    public string ProgressText =>
-        $"{FormatTime(TimeSpan.FromSeconds(PositionSeconds))} / " +
-        $"{FormatTime(TimeSpan.FromSeconds(DurationSeconds))}";
+    public string PositionText => FormatTime(TimeSpan.FromSeconds(PositionSeconds));
+
+    public string DurationText => FormatTime(TimeSpan.FromSeconds(DurationSeconds));
 
     /// <summary>
     /// Kept manual because the toolkit's generated setter cannot clamp the value

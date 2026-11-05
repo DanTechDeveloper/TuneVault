@@ -192,6 +192,10 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
             track.PictureData = EditPictureData;
         }
 
+        // Propagate the edit to every in-memory instance of this track so all
+        // views/rows update without a manual reload.
+        _library.ApplyTrackMetadata(track);
+
         if (!string.IsNullOrEmpty(track.FilePath) && File.Exists(track.FilePath))
         {
             await Task.Run(() =>

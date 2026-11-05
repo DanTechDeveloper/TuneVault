@@ -56,13 +56,20 @@ cd TuneVault.Tests && dotnet test
 
 ## Tech Stack
 
-- **Framework**: Avalonia UI 11 (.NET 9)
-- **MVVM**: CommunityToolkit.Mvvm
-- **Audio Output & Decoding**: NAudio 3 (`NAudio.Core`, `NAudio.Alsa`, `NAudio.SoundFile`, `NAudio.Wasapi`)
-- **Metadata & ID3 Tags**: TagLibSharp
-- **Persistence**: SQLite via `Microsoft.Data.Sqlite`
-- **Icons**: Material.Icons.Avalonia
+- **Framework**: Avalonia UI 11.3.12 (.NET 9)
+- **MVVM**: CommunityToolkit.Mvvm 8.4.2
+- **Audio Output & Decoding**: NAudio 3.3.0 (`NAudio.Core`, `NAudio.Alsa`, `NAudio.SoundFile`, `NAudio.Wasapi`)
+- **Metadata & ID3 Tags**: TagLibSharp 2.3.0
+- **Persistence**: SQLite via `Microsoft.Data.Sqlite` 9.0.22
+- **Icons**: Material.Icons.Avalonia 2.4.1
 - **Testing**: xUnit + Avalonia.Headless.XUnit + Moq
+
+## Persistence
+
+- Library is stored in `library.db` under the per-user application data folder (`~/.config/TuneVault/library.db` on Linux).
+- Schema is versioned (`PRAGMA user_version`, currently 2) and created/migrated by `ILibraryRepository.InitializeAsync()` on startup.
+- Duplicate rules are enforced by the database (same file path, or same title/artist). Imports report per-row outcomes.
+- Removing a track deletes the row and its cover art, never the file on disk.
 
 ## Architecture & Code Structure
 

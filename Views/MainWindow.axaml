@@ -13,6 +13,7 @@
         d:DesignHeight="620"
         x:Class="TuneVault.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        FontFamily="{StaticResource AppFontFamily}"
         Title="TuneVault"
         Width="960"
         Height="620"
@@ -23,8 +24,8 @@
         <Style Selector="Button.nav-btn">
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="Background" Value="#292943"/>
-            <Setter Property="Foreground" Value="#B8B8CC"/>
+            <Setter Property="Background" Value="{DynamicResource SidebarBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Transitions">
@@ -35,13 +36,16 @@
             </Setter>
         </Style>
         <Style Selector="Button.nav-btn:pointerover">
-            <Setter Property="Background" Value="#38385A"/>
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="Button.nav-btn.active">
-            <Setter Property="Background" Value="#292943"/>
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource SidebarBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.playing">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
     </Window.Styles>
 
@@ -55,11 +59,11 @@
 
             <StackPanel Spacing="4">
                 <TextBlock Text="TuneVault"
-                           FontSize="30"
+                           FontSize="{StaticResource FontSizeDisplay}"
                            FontWeight="Bold"/>
 
                 <TextBlock Text="Your personal offline music library"
-                           FontSize="13"
+                           FontSize="{StaticResource FontSizeMd}"
                            Opacity="0.65"/>
             </StackPanel>
 
@@ -70,16 +74,16 @@
 
                 <Button Content="{materialIcons:MaterialIconTextExt Kind=FileMusic, Text=Add File(s)}"
                         Command="{Binding Library.AddFilesCommand}"
-                        Background="#7256D9"
-                        Foreground="#FFFFFF"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         FontWeight="SemiBold"
                         CornerRadius="8"
                         Padding="14,10"/>
 
                 <Button Content="{materialIcons:MaterialIconTextExt Kind=FolderMusic, Text=Add Folder}"
                         Command="{Binding Library.AddFolderCommand}"
-                        Background="#292943"
-                        Foreground="#D8D8E0"
+                        Background="{DynamicResource SidebarBackgroundBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         FontWeight="SemiBold"
                         CornerRadius="8"
                         Padding="14,10"/>
@@ -97,8 +101,8 @@
             <Button Grid.Column="1"
                     Margin="8,0,0,0"
                     Padding="10,6"
-                    Background="#292943"
-                    Foreground="#D8D8E0"
+                    Background="{DynamicResource SidebarBackgroundBrush}"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
                     CornerRadius="8"
                     ToolTip.Tip="Clear search"
                     IsVisible="{Binding Library.ShowNoResults}"
@@ -115,14 +119,14 @@
     <Border Grid.Column="0"
         Padding="11"
         CornerRadius="10"
-        Background="#1E1E2E">
+        Background="{DynamicResource PanelBackgroundBrush}">
 
     <StackPanel Spacing="8">
 
         <TextBlock Text="LIBRARY"
-                   FontSize="12"
+                   FontSize="{StaticResource FontSizeSmMd}"
                    FontWeight="Bold"
-                   Foreground="#8888A8"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    Margin="8,8,0,12"/>
 
         <!-- Navigation buttons -->
@@ -158,7 +162,7 @@
 
         <Border Height="1"
                 Margin="4,8"
-                Background="#333344"/>
+                Background="{DynamicResource BorderSubtleBrush}"/>
 
     </StackPanel>
 </Border>
@@ -167,7 +171,7 @@
             <Border Grid.Column="1"
                     CornerRadius="18"
                     ClipToBounds="True"
-                    Background="#1E1E2E"
+                    Background="{DynamicResource PanelBackgroundBrush}"
                     Padding="12">
                 <Grid>
                     <views:AllSongsView IsVisible="{Binding IsAllSongsTab}"/>
@@ -185,9 +189,10 @@
         Padding="0"
         CornerRadius="18"
         ClipToBounds="True"
-        Background="#1A1A2E"
-        BorderBrush="#333344"
-        BorderThickness="1">
+        Background="{DynamicResource PanelBackgroundBrush}"
+        BorderBrush="{DynamicResource BorderSubtleBrush}"
+        BorderThickness="1"
+        Classes.playing="{Binding Playback.IsPlaying}">
 
         <Grid>
             <!-- Blurred album art background -->
@@ -196,12 +201,12 @@
                 Stretch="UniformToFill"
                 IsVisible="{Binding Playback.HasNowPlayingCoverArt}">
                 <Image.Effect>
-                    <BlurEffect Radius="100"/>
+                    <BlurEffect Radius="50"/>
                 </Image.Effect>
             </Image>
 
-            <!-- Readability scrim -->
-            <Border Background="#70000000"/>
+            <!-- Readability scrim (darkened for text readability over any cover art) -->
+            <Border Background="#88000000"/>
 
             <!-- Content -->
             <StackPanel Spacing="22" Margin="22">
@@ -212,14 +217,15 @@
                 Height="300"
                 CornerRadius="12"
                 ClipToBounds="True"
-                Background="#2A2A3E"
+                Background="{DynamicResource ElevatedBackgroundBrush}"
                 HorizontalAlignment="Center">
 
                 <Panel>
-                    <TextBlock
-                        Text="♪"
-                        FontSize="65"
-                        Foreground="#8888A8"
+                    <materialIcons:MaterialIcon
+                        Kind="MusicNote"
+                        Width="96"
+                        Height="96"
+                        Foreground="{DynamicResource TextMutedBrush}"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         IsVisible="{Binding !Playback.HasNowPlayingCoverArt}"/>
@@ -235,17 +241,19 @@
             <StackPanel Spacing="5">
                 <TextBlock
                     Text="{Binding Playback.NowPlayingTitle}"
-                    FontSize="21"
+                    FontSize="{StaticResource FontSizeHero}"
                     FontWeight="Bold"
-                    Foreground="#FFFFFF"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
                     TextAlignment="Center"
                     TextWrapping="Wrap"
+                    TextTrimming="CharacterEllipsis"
+                    MaxLines="2"
                     HorizontalAlignment="Center"/>
 
                 <TextBlock
                     Text="{Binding Playback.NowPlayingArtist}"
-                    FontSize="13"
-                    Foreground="#ffffffff"
+                    FontSize="{StaticResource FontSizeMd}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
                     TextAlignment="Center"
                     TextWrapping="Wrap"
                     HorizontalAlignment="Center"/>
@@ -258,15 +266,23 @@
     Minimum="0"
     Maximum="{Binding Playback.DurationSeconds}"
     Value="{Binding Playback.PositionSeconds, Mode=TwoWay}"
-    Background="#D5D3DE"
-    Foreground="#7256D9"/>
+    Background="#40FFFFFF"
+    Foreground="{DynamicResource TextPrimaryBrush}"/>
 
-<TextBlock
-    Text="{Binding Playback.ProgressText}"
-    FontSize="11"
-    FontWeight="Bold"
-    Foreground="#ffffffff"
-    HorizontalAlignment="Right"/>
+<Grid ColumnDefinitions="*,*">
+    <TextBlock
+        Text="{Binding Playback.PositionText}"
+        FontSize="{StaticResource FontSizeSm}"
+        FontWeight="Bold"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        HorizontalAlignment="Left"/>
+    <TextBlock Grid.Column="1"
+        Text="{Binding Playback.DurationText}"
+        FontSize="{StaticResource FontSizeSm}"
+        FontWeight="Bold"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        HorizontalAlignment="Right"/>
+</Grid>
             </StackPanel>
 
             <!-- Playback Controls -->
@@ -282,10 +298,10 @@
                     HorizontalContentAlignment="Center"
                     VerticalContentAlignment="Center"
                     Background="Transparent"
-                    Foreground="#ffffffff"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding Playback.PreviousCommand}"
                     ToolTip.Tip="Previous">
-                    <materialIcons:MaterialIcon Kind="SkipPrevious" Width="30" Height="30" Foreground="#ffffffff" />
+                    <materialIcons:MaterialIcon Kind="SkipPrevious" Width="30" Height="30" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Button>
 
                 <Button
@@ -299,7 +315,7 @@
                     FontWeight="SemiBold"
                     Command="{Binding Playback.PlayTrackCommand}"
                     ToolTip.Tip="{Binding Playback.PlayPauseToolTip}">
-                    <materialIcons:MaterialIcon Kind="{Binding Playback.PlayPauseIconKind}" Width="32" Height="32" Foreground="#ffffffff" />
+                    <materialIcons:MaterialIcon Kind="{Binding Playback.PlayPauseIconKind}" Width="32" Height="32" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Button>
 
                 <Button
@@ -310,29 +326,30 @@
                     HorizontalContentAlignment="Center"
                     VerticalContentAlignment="Center"
                     Background="Transparent"
-                    Foreground="#ffffffff"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
                     Command="{Binding Playback.NextCommand}"
                     ToolTip.Tip="Next">
-                    <materialIcons:MaterialIcon Kind="SkipNext" Width="30" Height="30" Foreground="#ffffffff" />
+                    <materialIcons:MaterialIcon Kind="SkipNext" Width="30" Height="30" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Button>
             </StackPanel>
 
             <!-- Volume -->
-            <StackPanel Spacing="8" Margin="0,4,0,0">
-
-                <TextBlock
-                    Text="VOLUME"
-                    FontSize="10"
-                    FontWeight="Bold"
-                    Foreground="#ffffffff"/>
-
-                <Slider
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,4,0,0" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Grid.Column="0"
+                    Kind="VolumeHigh"
+                    Width="18"
+                    Height="18"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    VerticalAlignment="Center"
+                    ToolTip.Tip="Volume"/>
+                <Slider Grid.Column="1"
                     Minimum="0"
                     Maximum="1"
                     Value="{Binding Playback.Volume, Mode=TwoWay}"
-                    Background="#D5D3DE"
-                    Foreground="#7256D9"/>
-            </StackPanel>
+                    Background="#40FFFFFF"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    VerticalAlignment="Center"/>
+            </Grid>
 
 
         </StackPanel>
@@ -347,8 +364,8 @@
 
         <!-- Success Toast Overlay (bottom-right, auto-dismisses) -->
         <Border IsVisible="{Binding Library.ShowToast}"
-                Background="#1E1E2E"
-                BorderBrush="#333344"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="12"
                 Padding="12"
@@ -370,19 +387,19 @@
                 <materialIcons:MaterialIcon Kind="CheckCircle"
                                             Width="28"
                                             Height="28"
-                                            Foreground="#2ECC71"
+                                            Foreground="{DynamicResource SuccessBrush}"
                                             VerticalAlignment="Center"
                                             IsVisible="{Binding Library.ToastCover, Converter={x:Static conv:ObjectConverters.IsNull}}"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{Binding Library.ToastTitle}"
                                FontWeight="SemiBold"
-                               FontSize="13"
-                               Foreground="#FFFFFF"/>
+                               FontSize="{StaticResource FontSizeMd}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="{Binding Library.ToastMessage}"
-                               FontSize="11"
+                               FontSize="{StaticResource FontSizeSm}"
                                Opacity="0.85"
-                               Foreground="#D8D8E0"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
 
@@ -391,11 +408,11 @@
                         Height="28"
                         Padding="0"
                         VerticalAlignment="Center"
-                        Background="#292943"
+                        Background="{DynamicResource SidebarBackgroundBrush}"
                         CornerRadius="6"
                         Command="{Binding Library.CloseToastCommand}"
                         ToolTip.Tip="Dismiss">
-                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#D8D8E0"/>
+                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </Button>
             </Grid>
         </Border>
@@ -418,11 +435,11 @@
                 <StackPanel Spacing="16">
                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                         <TextBlock Text="Importing Music"
-                                   FontSize="16"
+                                   FontSize="{StaticResource FontSizeLg}"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="Reading tags and decoding artwork..."
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSizeSmMd}"
                                    Opacity="0.65"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -434,7 +451,7 @@
                                  CornerRadius="4"/>
 
                     <TextBlock Text="{Binding Library.LoadingStatusText}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontSizeSmMd}"
                                Opacity="0.8"
                                TextAlignment="Center"
                                TextWrapping="Wrap"/>
@@ -461,17 +478,17 @@
                     <StackPanel Spacing="6" HorizontalAlignment="Center">
                         <TextBlock Text="⚠"
                                    FontSize="32"
-                                   Foreground="#F59E0B"
+                                   Foreground="{DynamicResource WarningBrush}"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding Library.DuplicateModalTitle}"
-                                   FontSize="16"
+                                   FontSize="{StaticResource FontSizeLg}"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <ScrollViewer MaxHeight="200">
                         <TextBlock Text="{Binding Library.DuplicateModalMessage}"
-                                   FontSize="13"
+                                   FontSize="{StaticResource FontSizeMd}"
                                    Opacity="0.85"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap"/>
@@ -508,10 +525,10 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Edit Track Info"
-                                       FontSize="18"
+                                       FontSize="{StaticResource FontSizeHeading}"
                                        FontWeight="Bold"/>
                             <TextBlock Text="Modify tags and embedded album art"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSizeSmMd}"
                                        Opacity="0.65"/>
                         </StackPanel>
                         <Button Grid.Column="1"
@@ -520,10 +537,10 @@
                                 Padding="0"
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
-                                Background="#292943"
+                                Background="{DynamicResource SidebarBackgroundBrush}"
                                 CornerRadius="8"
                                 Command="{Binding Editor.CancelEditMetadataCommand}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#D8D8E0"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         </Button>
                     </Grid>
 
@@ -535,12 +552,12 @@
                                         Height="88"
                                         CornerRadius="8"
                                         ClipToBounds="True"
-                                        Background="#222238">
+                                        Background="{DynamicResource ElevatedBackgroundBrush}">
                                     <Panel>
                                         <materialIcons:MaterialIcon Kind="MusicNote"
                                                                      Width="40"
                                                                      Height="40"
-                                                                     Foreground="#8888A8"
+                                                                     Foreground="{DynamicResource TextMutedBrush}"
                                                                      HorizontalAlignment="Center"
                                                                      VerticalAlignment="Center"
                                                                      IsVisible="{Binding !Editor.HasEditCoverArt}"/>
@@ -551,25 +568,25 @@
                                 </Border>
 
                                 <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                                    <TextBlock Text="Album Artwork" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="Album Artwork" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button Content="{materialIcons:MaterialIconTextExt Kind=PhotoLibrary, Text=Choose Image}"
                                                 Padding="10,6"
-                                                FontSize="12"
-                                                Background="#292943"
-                                                Foreground="#D8D8E0"
+                                                FontSize="{StaticResource FontSizeSmMd}"
+                                                Background="{DynamicResource SidebarBackgroundBrush}"
+                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                 CornerRadius="8"
                                                 Command="{Binding Editor.ChooseCoverArtCommand}"/>
                                         <Button Content="{materialIcons:MaterialIconTextExt Kind=ImageRemove, Text=Remove}"
                                                 Padding="10,6"
-                                                FontSize="12"
-                                                Background="#292943"
-                                                Foreground="#D8D8E0"
+                                                FontSize="{StaticResource FontSizeSmMd}"
+                                                Background="{DynamicResource SidebarBackgroundBrush}"
+                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                 CornerRadius="8"
                                                 IsVisible="{Binding Editor.HasEditCoverArt}"
                                                 Command="{Binding Editor.RemoveCoverArtCommand}"/>
                                     </StackPanel>
-                                    <TextBlock Text="Supports JPG, PNG, WEBP, BMP" FontSize="11" Opacity="0.55"/>
+                                    <TextBlock Text="Supports JPG, PNG, WEBP, BMP" FontSize="{StaticResource FontSizeSm}" Opacity="0.55"/>
                                 </StackPanel>
                             </Grid>
 
@@ -577,19 +594,19 @@
 
                             <!-- Metadata Fields -->
                             <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Title" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Title" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Editor.EditTitle, Mode=TwoWay}" Watermark="Song title"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Artist" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Artist" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Editor.EditArtist, Mode=TwoWay}" Watermark="Artist name"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Album" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Album" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Editor.EditAlbum, Mode=TwoWay}" Watermark="Album title"/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Genre" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Genre" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Editor.EditGenre, Mode=TwoWay}" Watermark="Music genre"/>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Year" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Year" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
                                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Editor.EditYear, Mode=TwoWay}" Watermark="Release year"/>
                             </Grid>
 
@@ -598,10 +615,10 @@
                             <!-- Read-only Audio Details -->
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding Editor.EditDuration, StringFormat='Duration: {0}'}"
-                                           FontSize="11"
+                                           FontSize="{StaticResource FontSizeSm}"
                                            Opacity="0.6"/>
                                 <TextBlock Text="{Binding Editor.EditFilePath, StringFormat='Location: {0}'}"
-                                           FontSize="11"
+                                           FontSize="{StaticResource FontSizeSm}"
                                            Opacity="0.6"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
@@ -616,22 +633,22 @@
                         <Button Content="{materialIcons:MaterialIconTextExt Kind=Cancel, Text=Cancel}"
                                 MinWidth="80"
                                 HorizontalContentAlignment="Center"
-                                Background="#292943"
-                                Foreground="#D8D8E0"
+                                Background="{DynamicResource SidebarBackgroundBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 CornerRadius="8"
                                 Command="{Binding Editor.CancelEditMetadataCommand}"
                                 Padding="14,8"/>
                         <Button Content="{materialIcons:MaterialIconTextExt Kind=ContentSave, Text=Save Changes}"
                                 MinWidth="110"
                                 HorizontalContentAlignment="Center"
-                                Background="#7256D9"
-                                Foreground="#FFFFFF"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
                                 CornerRadius="8"
                                 Command="{Binding Editor.SaveTrackMetadataCommand}"
                                 Padding="16,8"
                                 FontWeight="SemiBold"/>
                         <Button Content="{materialIcons:MaterialIconTextExt Kind=Delete, Text=Delete}"
-                                Background="#C0392B"
+                                Background="{DynamicResource DangerBrush}"
                                 Foreground="White"
                                 CornerRadius="8"
                                 Padding="14,8"
@@ -662,16 +679,16 @@
                         <materialIcons:MaterialIcon Kind="DeleteOutline"
                                                      Width="40"
                                                      Height="40"
-                                                     Foreground="#C0392B"
+                                                     Foreground="{DynamicResource DangerBrush}"
                                                      HorizontalAlignment="Center"/>
                         <TextBlock Text="Delete Track?"
-                                   FontSize="16"
+                                   FontSize="{StaticResource FontSizeLg}"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <TextBlock Text="{Binding Library.DeleteConfirmationMessage}"
-                               FontSize="13"
+                               FontSize="{StaticResource FontSizeMd}"
                                Opacity="0.85"
                                TextAlignment="Center"
                                TextWrapping="Wrap"/>
@@ -683,8 +700,8 @@
                                 MinWidth="100"
                                 HorizontalContentAlignment="Center"
                                 Command="{Binding Library.CancelRemoveTrackCommand}"
-                                Background="#292943"
-                                Foreground="#D8D8E0"
+                                Background="{DynamicResource SidebarBackgroundBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 CornerRadius="8"
                                 Padding="18,8"/>
                         <Button Content="{materialIcons:MaterialIconTextExt Kind=Delete, Text=Delete}"
@@ -692,7 +709,7 @@
                                 HorizontalContentAlignment="Center"
                                 Command="{Binding Library.ConfirmRemoveTrackCommand}"
                                 Padding="18,8"
-                                Background="#C0392B"
+                                Background="{DynamicResource DangerBrush}"
                                 Foreground="White"
                                 CornerRadius="8"
                                 FontWeight="SemiBold"/>
