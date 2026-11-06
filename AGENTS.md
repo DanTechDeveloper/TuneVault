@@ -40,7 +40,7 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - `Track.IsMissing` computed at load from `File.Exists`, never persisted.
 - All Songs ordering is SQL-side (`LoadAllAsync(sortBy, descending)`). `LibraryViewModel.ReloadSortedAsync` rebuilds `Tracks` but reuses existing `Track` instances by `Id` so `PlaybackViewModel`'s loaded-track reference stays valid.
 - Search and album/artist/genre filtering are **in-memory**; `_allTracks` loaded once. `SearchText` debounces 350 ms (`System.Threading.Timer`) and filters in memory. Search is **per view** and never switches tabs.
-- Albums view: list → filtered songs. Artists view: artist list → all artist songs. Album Artists view: artist list → artist detail (albums + all-songs entry) → album songs/all songs. Genres view: genre list → all genre songs. Grouping uses `Track.EffectiveAlbumArtist` for album artists.
+- Albums view: list → filtered songs. Artists view: artist list (grouped by `Track.Artist`) → all artist songs. Album Artists view: artist list (grouped by `Track.EffectiveAlbumArtist`) → artist detail (albums + all-songs entry) → album songs/all songs. Genres view: genre list → all genre songs. Tab switching rebuilds the shared artist collection for the active grouping.
 - Tab switching resets drill-down state (`SelectedAlbum`, `SelectedArtist`, `SelectedGenre`) to Layer 1.
 
 ## Reusable UI
@@ -53,7 +53,7 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 
 ## Playback navigation
 
-- Next/Prev follows the **current view's song list** (AllSongs → `Tracks`, album detail → `AlbumTracks`, artist detail → `ArtistSongs`, genre detail → `GenreSongs`); non-song views fall back to `Tracks`.
+- Next/Prev follows the **queue captured when the current track was loaded** (so switching views does not hijack playback); when nothing is loaded, it falls back to the current view's song list (`Tracks`/`AlbumTracks`/`ArtistSongs`/`GenreSongs`). Boundary presses show a toast instead of wrapping or silently no-oping.
 - No wrap-around at boundaries; Previous restarts the current track at the first track.
 - No auto-advance on track end (empty "track finished" branch stays as-is).
 
@@ -81,7 +81,9 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - Search has no-results borders with a "Clear Field" button (`ClearSearchCommand`, aliases `ClearSearchText`/`ClearField`) in All Songs/Albums/Album Artists/Artists/Genres views.
 - App theme is set to `Dark` in `App.axaml`.
 - Do not edit generated `obj/`/`bin/` artifacts.
-- `Track` overrides `Equals`/`GetHashCode` by `Id`, so `ListBox` selection matches across collection instances (All Songs vs filtered tabs). `ApplyTrackMetadata` (LibraryViewModel) propagates edits to every instance of a track; call it after mutating a track or rows go stale.
+- `Track` overrides `Equals`/`GetHashCode` by `Id`, so `ListBox` selection matches across collection instances (All Songs vs filtered tabs). `ApplyTrackMetadata` (LibraryViewModel) propagates edits (including `AlbumArtist`) to every instance of a track and rebuilds summary collections; call it after mutating a track or rows go stale.
+- Metadata editor validates `EditYear` (empty → 0/unknown; otherwise must parse as uint ≤ 9999). Invalid input sets `EditYearError` and aborts save without closing the modal.
+- Unknown fallbacks: artist uses `"Unknown Artist"` (capital A) everywhere; album/genre are stored as `null` and normalized to `"Unknown Album"`/`"Unknown Genre"` in views; search treats null album/genre as their bucket names. Title fallback is `"Untitled track"` (identity key becomes null).
 - Global `FontFamily` is set via `MainWindow.FontFamily` (not `Application.Styles` — `Control` base lacks `FontFamily` for grouped selectors). Views inherit it.
 - Use `{DynamicResource ...}` (not `{StaticResource}`) for token lookups inside views/styles; `StaticResource` fails at runtime in those contexts.
 - Modal scrims use `#88000000` for text readability over any cover art; slider track/thumb use `#40FFFFFF`/`#FFFFFF`.

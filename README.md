@@ -8,13 +8,13 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Album Artists**, **Artists**, and **Genres**.
   - **Albums view**: two-layer — album list (with cover art, track counts, year, and an "Unknown Album" bucket) drilling into the album's filtered track list.
   - **Album Artists view**: artist list → artist detail (all-songs entry + album list) → album songs / all-artist songs, with reusable track rows.
-  - **Artists view**: two-layer — artist list (with track counts and year) → all artist songs.
-  - **Genres view**: two-layer — genre list (with track counts and year) → all genre songs.
+  - **Artists view**: two-layer — artist list (grouped by track artist, with track counts, year, and an "Unknown Artist" bucket) → all artist songs.
+  - **Genres view**: two-layer — genre list (with track counts, year, and an "Unknown Genre" bucket) → all genre songs.
 - **Audio File & Folder Importing**: Add individual audio files or import entire directory trees with recursive scanning.
 - **Persistent SQLite Library**: Added files and folders are stored in `library.db` under the per-user application data folder, so the library survives restarts.
 - **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
 - **Missing File Flagging**: Tracks whose file disappeared (or whose drive is offline) are flagged in the list instead of being deleted from the library.
-- **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files.
+- **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files. Validates Year (empty → unknown; invalid input shows an inline error and blocks save) and shows a TrackRow-style toast on success.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
 - **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
 - **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.

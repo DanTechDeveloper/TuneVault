@@ -81,6 +81,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         // (in which case OnSelectedArtistChanged won't fire).
         Library.SelectedArtistAlbum = null;
         Library.IsArtistAllSongsView = false;
+        Library.RefreshArtistsView();
         Library.IsTabSwitching = false;
     }
 

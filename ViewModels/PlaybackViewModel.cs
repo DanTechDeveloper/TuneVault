@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -20,6 +21,9 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     private readonly LibraryViewModel _library;
     private double _volume = 0.8;
     private Track? _loadedTrack;
+    // Queue captured when a track is loaded, so Prev/Next follow the playing
+    // track even after the user switches views. Null falls back to the view queue.
+    private List<Track>? _loadedQueue;
     private bool _suppressSeek;
     private bool _disposed;
 
@@ -130,6 +134,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 _library.SetTrackPlayingState(_loadedTrack.Id, false);
             }
             _loadedTrack = null;
+            _loadedQueue = null;
             IsPlaying = false;
             // Reset slider to 0 so the state is "fresh", not stale at end.
             _suppressSeek = true;
@@ -160,7 +165,9 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void PlayTrack(Track? track)
+    private void PlayTrack(Track? track) => PlayTrackCore(track, true);
+
+    private void PlayTrackCore(Track? track, bool captureQueue)
     {
         // With no explicit row parameter the header button targets the loaded
         // track first, so its Play/Pause label always matches the action.
@@ -191,6 +198,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 var duration = _audioPlayer.Load(track.FilePath);
 
                 _loadedTrack = track;
+                if (captureQueue)
+                {
+                    _loadedQueue = CurrentQueue.ToList();
+                }
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
                 DurationSeconds = duration.TotalSeconds;
@@ -251,6 +262,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 var duration = _audioPlayer.Load(track.FilePath);
 
                 _loadedTrack = track;
+                _loadedQueue = CurrentQueue.ToList();
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
                 DurationSeconds = duration.TotalSeconds;
@@ -304,12 +316,24 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         _library.IsGenreSongsView ? _library.GenreSongs :
         _library.Tracks; // AllSongs (default, incl. fallback for list views)
 
+    /// <summary>
+    /// The queue Prev/Next actually navigate. While a track is loaded this is the
+    /// list it was started from, so switching views does not hijack navigation.
+    /// With nothing loaded, fall back to the view the user is currently browsing.
+    /// </summary>
+    private List<Track> ActiveQueue =>
+        _loadedTrack is not null && _loadedQueue is { Count: > 0 } &&
+        _loadedQueue.Any(t => t.Id == _loadedTrack.Id)
+            ? _loadedQueue
+            : CurrentQueue.ToList();
+
     [RelayCommand]
     private void Next()
     {
-        var queue = CurrentQueue;
+        var queue = ActiveQueue;
         if (queue.Count == 0)
         {
+            ShowBoundaryToast("No tracks", "Add files or a folder to start playback.");
             return;
         }
 
@@ -355,17 +379,23 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         }
         if (currentIdx < 0 || currentIdx + 1 >= queue.Count)
         {
+            ShowBoundaryToast("Last track", "No next track in this list.");
             return; // no next track (no wrap at the boundary)
         }
 
-        PlayTrack(queue[currentIdx + 1]);
+        PlayTrackCore(queue[currentIdx + 1], false);
     }
 
     [RelayCommand]
     private void Previous()
     {
-        var queue = CurrentQueue;
-        if (queue.Count == 0 || _loadedTrack is null)
+        var queue = ActiveQueue;
+        if (queue.Count == 0)
+        {
+            ShowBoundaryToast("No tracks", "Add files or a folder to start playback.");
+            return;
+        }
+        if (_loadedTrack is null)
         {
             return;
         }
@@ -394,13 +424,21 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 }
             }
         }
-        if (idx > 0)
+        if (idx < 0)
         {
-            PlayTrack(queue[idx - 1]);
+            ShowBoundaryToast("No previous track", "This track is not in the playing queue.");
             return;
         }
 
-        // At the first track (or not found): restart the current track.
+        if (idx > 0)
+        {
+            PlayTrackCore(queue[idx - 1], false);
+            return;
+        }
+
+        ShowBoundaryToast("First track", "Already at the first track.");
+
+        // At the first track: restart the current track.
         try
         {
             _audioPlayer.Seek(TimeSpan.Zero);
@@ -481,6 +519,15 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
     private void OnTrackRemoved(Track track)
     {
+        if (_loadedQueue is not null)
+        {
+            _loadedQueue.RemoveAll(t => t.Id == track.Id);
+            if (_loadedQueue.Count == 0)
+            {
+                _loadedQueue = null;
+            }
+        }
+
         if (!ReferenceEquals(_loadedTrack, track))
         {
             return;
@@ -518,11 +565,22 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         _library.ClearAllPlayingState();
 
         _loadedTrack = null;
+        _loadedQueue = null;
         NowPlayingTrack = null;
         IsPlaying = false;
         DurationSeconds = 0;
         SetPosition(0);
         StopCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ShowBoundaryToast(string title, string message)
+    {
+        _library.ToastTitle = title;
+        _library.ToastSubtitle = "";
+        _library.ToastDetail = "";
+        _library.ToastMessage = message;
+        _library.ToastCover = null;
+        _library.ShowToast = true;
     }
 
     private static string FormatTime(TimeSpan value) =>

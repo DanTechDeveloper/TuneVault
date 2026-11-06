@@ -377,30 +377,62 @@
                 Margin="24">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
 
-                <Image Source="{Binding Library.ToastCover}"
-                       Width="56"
-                       Height="56"
-                       Stretch="UniformToFill"
-                       VerticalAlignment="Center"
-                       IsVisible="{Binding Library.ToastCover, Converter={x:Static conv:ObjectConverters.IsNotNull}}"/>
+                <Border Width="38"
+                        Height="38"
+                        CornerRadius="6"
+                        ClipToBounds="True"
+                        Background="{DynamicResource ElevatedBackgroundBrush}"
+                        VerticalAlignment="Center">
+                    <Panel>
+                        <materialIcons:MaterialIcon Kind="MusicNote"
+                                                   Width="16"
+                                                   Height="16"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding Library.ToastCover, Converter={x:Static conv:ObjectConverters.IsNull}}"/>
+                        <Image Source="{Binding Library.ToastCover}"
+                               Stretch="UniformToFill"
+                               IsVisible="{Binding Library.ToastCover, Converter={x:Static conv:ObjectConverters.IsNotNull}}"/>
+                    </Panel>
+                </Border>
 
-                <materialIcons:MaterialIcon Kind="CheckCircle"
-                                            Width="28"
-                                            Height="28"
-                                            Foreground="{DynamicResource SuccessBrush}"
-                                            VerticalAlignment="Center"
-                                            IsVisible="{Binding Library.ToastCover, Converter={x:Static conv:ObjectConverters.IsNull}}"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                IsVisible="{Binding Library.ToastMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}">
+                        <materialIcons:MaterialIcon Kind="CheckCircle"
+                                                   Width="18"
+                                                   Height="18"
+                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Library.ToastMessage}"
+                                   FontSize="{StaticResource FontSizeMd}"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.95"
+                                   Foreground="{DynamicResource SuccessBrush}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{Binding Library.ToastTitle}"
                                FontWeight="SemiBold"
-                               FontSize="{StaticResource FontSizeMd}"
+                               TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding Library.ToastMessage}"
-                               FontSize="{StaticResource FontSizeSm}"
-                               Opacity="0.85"
+
+                    <TextBlock Text="{Binding Library.ToastSubtitle}"
+                               FontSize="{StaticResource FontSizeSmMd}"
+                               Opacity="0.65"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"/>
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Library.ToastSubtitle, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <TextBlock Text="{Binding Library.ToastDetail}"
+                               FontSize="{StaticResource FontSizeSm}"
+                               Opacity="0.5"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Library.ToastDetail, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
 
                 <Button Grid.Column="2"
@@ -611,6 +643,12 @@
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Opacity="0.2"/>
+
+                            <TextBlock Text="{Binding Editor.EditYearError}"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       Foreground="{DynamicResource DangerBrush}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding Editor.EditYearError, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"/>
 
                             <!-- Read-only Audio Details -->
                             <StackPanel Spacing="4">

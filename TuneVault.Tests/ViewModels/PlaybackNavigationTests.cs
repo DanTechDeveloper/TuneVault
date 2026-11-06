@@ -197,4 +197,151 @@ public class PlaybackNavigationTests
         }
         finally { Cleanup(dbPath, tempFiles); }
     }
+
+    [AvaloniaFact]
+    public void Next_CrossView_FollowsCapturedQueue()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+
+            vm.PlayTrackCommand.Execute(library.Tracks[1]);
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+
+            // Browse an artist view whose queue is empty/different without
+            // changing the queue the playing track belongs to.
+            var nobody = new ArtistSummary("Nobody", 0, null);
+            library.SelectedArtist = nobody;
+
+            vm.NextCommand.Execute(null);
+
+            Assert.Equal("Song2", vm.NowPlayingTrack!.Title);
+            Assert.False(library.ShowToast);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Previous_CrossView_FollowsCapturedQueue()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+
+            vm.PlayTrackCommand.Execute(library.Tracks[1]);
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+
+            var nobody = new ArtistSummary("Nobody", 0, null);
+            library.SelectedArtist = nobody;
+
+            vm.PreviousCommand.Execute(null);
+
+            Assert.Equal("Song0", vm.NowPlayingTrack!.Title);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Next_AtLastTrack_ShowsBoundaryToast()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[2]);
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+
+            vm.NextCommand.Execute(null);
+
+            Assert.Same(library.Tracks[2], vm.NowPlayingTrack);
+            Assert.True(library.ShowToast);
+            Assert.Equal("No next track in this list.", library.ToastMessage);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Previous_AtFirstTrack_ShowsBoundaryToastAndRestarts()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            player.Setup(p => p.IsPlaying).Returns(true);
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[0]);
+            vm.IsPlaying = true;
+
+            vm.PreviousCommand.Execute(null);
+
+            player.Verify(p => p.Seek(TimeSpan.Zero), Times.Once);
+            Assert.Equal("Song0", vm.NowPlayingTrack!.Title);
+            Assert.True(library.ShowToast);
+            Assert.Equal("Already at the first track.", library.ToastMessage);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Next_EmptyQueue_ShowsNoTracksToast()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(0);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.NextCommand.Execute(null);
+            player.Verify(p => p.Load(It.IsAny<string>()), Times.Never);
+            Assert.True(library.ShowToast);
+            Assert.Equal("Add files or a folder to start playback.", library.ToastMessage);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Previous_EmptyQueue_ShowsNoTracksToast()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(0);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PreviousCommand.Execute(null);
+            player.Verify(p => p.Seek(It.IsAny<TimeSpan>()), Times.Never);
+            Assert.True(library.ShowToast);
+            Assert.Equal("Add files or a folder to start playback.", library.ToastMessage);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void Next_SkipsRemovedTrackInCapturedQueue()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[1]);
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+
+            library.Remove(library.Tracks[2]);
+
+            vm.NextCommand.Execute(null);
+
+            Assert.True(library.ShowToast);
+            Assert.Equal("No next track in this list.", library.ToastMessage);
+            Assert.Equal("Song1", vm.NowPlayingTrack!.Title);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
 }

@@ -50,6 +50,9 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
     private string _editYear = "";
 
     [ObservableProperty]
+    private string _editYearError = "";
+
+    [ObservableProperty]
     private string _editFilePath = "";
 
     [ObservableProperty]
@@ -81,6 +84,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         EditAlbum = track.Album ?? "";
         EditGenre = track.Genre ?? "";
         EditYear = track.Year > 0 ? track.Year.ToString() : "";
+        EditYearError = "";
         EditFilePath = track.FilePath ?? "Unknown";
         EditDuration = track.DurationDisplay;
         EditPictureData = track.PictureData;
@@ -114,6 +118,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         EditingTrack = null;
         EditPictureData = null;
         EditCoverArtBitmap = null;
+        EditYearError = "";
         _editCoverArtChanged = false;
     }
 
@@ -169,10 +174,19 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 
         var track = EditingTrack;
         var newTitle = string.IsNullOrWhiteSpace(EditTitle) ? TitleFromPath(track.FilePath ?? "") : EditTitle.Trim();
-        var newArtist = string.IsNullOrWhiteSpace(EditArtist) ? "Unknown artist" : EditArtist.Trim();
+        var newArtist = string.IsNullOrWhiteSpace(EditArtist) ? "Unknown Artist" : EditArtist.Trim();
         var newAlbum = string.IsNullOrWhiteSpace(EditAlbum) ? null : EditAlbum.Trim();
         var newGenre = string.IsNullOrWhiteSpace(EditGenre) ? null : EditGenre.Trim();
-        uint.TryParse(EditYear, out var newYear);
+        EditYearError = "";
+        uint newYear = 0;
+        if (!string.IsNullOrWhiteSpace(EditYear))
+        {
+            if (!uint.TryParse(EditYear.Trim(), out newYear) || newYear > 9999)
+            {
+                EditYearError = "Enter a valid year (1–9999) or leave blank.";
+                return;
+            }
+        }
 
         // The library skips duplicate title/artist pairs, so refuse the edit before
         // rewriting the audio file's tags — otherwise the file and the database diverge.
@@ -181,8 +195,16 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
             return;
         }
 
+        var oldArtist = track.Artist;
         track.Title = newTitle;
         track.Artist = newArtist;
+        // Keep the album-artist grouping key in sync when it tracked the old
+        // performer, so Artists/Album Artists views follow the rename.
+        var sameAlbumArtist = string.Equals(track.AlbumArtist?.Trim(), oldArtist?.Trim(), StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist) || sameAlbumArtist)
+        {
+            track.AlbumArtist = newArtist;
+        }
         track.Album = newAlbum;
         track.Genre = newGenre;
         track.Year = newYear;
@@ -244,11 +266,45 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         {
         }
 
+        // Reuse the window-level toast so the edit is confirmed the same way
+        // imports are, mirroring the TrackRow layout (cover + title + artist/album + genre).
+        _library.ToastTitle = newTitle;
+        _library.ToastSubtitle = track.ArtistAlbum;
+        _library.ToastDetail = track.GenreDisplay;
+        _library.ToastMessage = "DONE!";
+        Avalonia.Media.Imaging.Bitmap? cover = null;
+        if (track.PictureData is { Length: > 0 })
+        {
+            try
+            {
+                using var ms = new MemoryStream(track.PictureData);
+                cover = new Avalonia.Media.Imaging.Bitmap(ms);
+            }
+            catch
+            {
+            }
+        }
+        _library.ToastCover = cover;
+        _library.ShowToast = true;
+
         IsEditMetadataModalOpen = false;
         EditingTrack = null;
         EditPictureData = null;
         EditCoverArtBitmap = null;
         _editCoverArtChanged = false;
+    }
+
+    partial void OnEditYearChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            EditYearError = "";
+            return;
+        }
+        if (uint.TryParse(value.Trim(), out var y) && y <= 9999)
+        {
+            EditYearError = "";
+        }
     }
 
     private void OnTrackRemoved(Track track)

@@ -21,7 +21,7 @@ public sealed partial class Track : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ArtistAlbum))]
-    private string _artist = "Unknown artist";
+    private string _artist = "Unknown Artist";
 
     [ObservableProperty]
     private string? _albumArtist;

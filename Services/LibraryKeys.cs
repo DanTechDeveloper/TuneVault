@@ -34,7 +34,7 @@ public static class LibraryKeys
             return null;
         }
 
-        var normalizedArtist = string.IsNullOrWhiteSpace(artist) ? "Unknown artist" : artist.Trim();
+        var normalizedArtist = string.IsNullOrWhiteSpace(artist) ? "Unknown Artist" : artist.Trim();
         return normalizedTitle.ToLowerInvariant() + Separator + normalizedArtist.ToLowerInvariant();
     }
 }

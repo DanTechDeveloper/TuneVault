@@ -170,4 +170,39 @@ public class LibraryViewModelTests
         }
         finally { Cleanup(dbPath); }
     }
+
+    [AvaloniaFact]
+    public async Task Import_ArtistlessTrack_UsesUnknownArtistBucket()
+    {
+        var (vm, dbPath) = CreateVm();
+        try
+        {
+            var repo = new SqliteLibraryRepository(dbPath);
+            await repo.AddRangeAsync(new[] {
+                new Track { FilePath = "/tmp/a.mp3", Title = "T1", Artist = "", Duration = TimeSpan.FromSeconds(10) },
+            });
+            await vm.LoadLibraryAsync();
+            Assert.Single(vm.Artists);
+            Assert.Equal("Unknown Artist", vm.Artists[0].Name);
+        }
+        finally { Cleanup(dbPath); }
+    }
+
+    [AvaloniaFact]
+    public async Task Search_UnknownAlbum_FindsNullAlbumTrack()
+    {
+        var (vm, dbPath) = CreateVm();
+        try
+        {
+            var repo = new SqliteLibraryRepository(dbPath);
+            await repo.AddRangeAsync(new[] {
+                new Track { FilePath = "/tmp/a.mp3", Title = "T1", Artist = "A", Album = null, Duration = TimeSpan.FromSeconds(10) },
+            });
+            await vm.LoadLibraryAsync();
+            vm.SearchText = "Unknown Album";
+            await Task.Delay(500);
+            Assert.Single(vm.Tracks);
+        }
+        finally { Cleanup(dbPath); }
+    }
 }

@@ -416,6 +416,14 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _toastMessage = "";
 
+    /// <summary>Secondary line for the toast, mirroring TrackRow's artist/album label.</summary>
+    [ObservableProperty]
+    private string _toastSubtitle = "";
+
+    /// <summary>Tertiary line for the toast, mirroring TrackRow's genre display.</summary>
+    [ObservableProperty]
+    private string _toastDetail = "";
+
     /// <summary>Cover image for the toast (file adds only; null for folders).</summary>
     [ObservableProperty]
     private Avalonia.Media.Imaging.Bitmap? _toastCover;
@@ -614,11 +622,88 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (ReferenceEquals(t, source)) continue;
             t.Title = source.Title;
             t.Artist = source.Artist;
+            t.AlbumArtist = source.AlbumArtist;
             t.Album = source.Album;
             t.Genre = source.Genre;
             t.Year = source.Year;
             t.PictureData = source.PictureData;
             t.IsMissing = source.IsMissing;
+        }
+
+        // Summary tiles (artists/albums/genres) and drill-down headers are derived
+        // aggregates, not observable track rows, so rebuild them too. Capture which
+        // drill-down the edited track belonged to BEFORE refreshing, so a renamed
+        // artist/album/genre is followed instead of collapsing to Layer 1.
+        var inSelectedAlbum = SelectedAlbum is not null && AlbumTracks.Any(t => t.Id == source.Id);
+        var inSelectedArtist = SelectedArtist is not null && ArtistSongs.Any(t => t.Id == source.Id);
+        var inSelectedGenre = SelectedGenre is not null && GenreSongs.Any(t => t.Id == source.Id);
+
+        RefreshTracksView();
+
+        RefreshAlbumsView();
+        if (inSelectedAlbum)
+        {
+            var match = Albums.FirstOrDefault(a => a.Name == NormalizeAlbum(source.Album));
+            SelectedAlbum = match;
+        }
+        if (SelectedAlbum is not null)
+        {
+            RefreshAlbumTracksView();
+        }
+
+        var wasAllSongs = IsArtistAllSongsView;
+        var prevArtistAlbum = SelectedArtistAlbum;
+        RefreshArtistsView();
+        if (inSelectedArtist)
+        {
+            var followKey = IsArtistsTab ? source.Artist : source.EffectiveAlbumArtist;
+            var match = Artists.FirstOrDefault(a => a.Name == NormalizeArtist(followKey));
+            SelectedArtist = match;
+            if (match is not null)
+            {
+                if (wasAllSongs)
+                {
+                    IsArtistAllSongsView = true;
+                }
+                else if (prevArtistAlbum is not null)
+                {
+                    var newAlbum = ArtistAlbums.FirstOrDefault(a => a.Name == prevArtistAlbum.Name);
+                    if (newAlbum is not null)
+                    {
+                        SelectedArtistAlbum = newAlbum;
+                    }
+                    else
+                    {
+                        RefreshArtistAlbums();
+                    }
+                }
+                else
+                {
+                    RefreshArtistAlbums();
+                }
+            }
+        }
+        else if (SelectedArtist is not null)
+        {
+            if (IsArtistSongsView)
+            {
+                RefreshArtistSongs();
+            }
+            else
+            {
+                RefreshArtistAlbums();
+            }
+        }
+
+        RefreshGenresView();
+        if (inSelectedGenre)
+        {
+            var match = Genres.FirstOrDefault(g => g.Name == NormalizeGenre(source.Genre));
+            SelectedGenre = match;
+        }
+        if (SelectedGenre is not null)
+        {
+            RefreshGenreSongs();
         }
     }
 
@@ -638,10 +723,12 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         if (string.IsNullOrWhiteSpace(term)) return true;
         var q = term.Trim();
+        var album = string.IsNullOrWhiteSpace(t.Album) ? "Unknown Album" : t.Album;
+        var genre = string.IsNullOrWhiteSpace(t.Genre) ? "Unknown Genre" : t.Genre;
         return (t.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
             || (t.Artist?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (t.Album?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (t.Genre?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+            || album.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || genre.Contains(q, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateSortContext()
@@ -785,6 +872,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                     a.Name == selectedAlbumName &&
                     (a.Artist ?? string.Empty) == (selectedAlbumArtist ?? string.Empty));
             }
+            if (match is null && SelectedTrack is not null)
+            {
+                match = Albums.FirstOrDefault(a => a.Name == NormalizeAlbum(SelectedTrack.Album));
+            }
 
             SelectedAlbum = match;
 
@@ -824,11 +915,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private static string NormalizeArtist(string? artist) =>
         string.IsNullOrWhiteSpace(artist) ? "Unknown Artist" : artist.Trim();
 
-    private void RefreshArtistsView()
+    public void RefreshArtistsView()
     {
         var term = SearchText;
         var groups = _allTracks
-            .GroupBy(t => NormalizeArtist(t.EffectiveAlbumArtist))
+            .GroupBy(t => NormalizeArtist(IsArtistsTab ? t.Artist : t.EffectiveAlbumArtist))
             .Select(g => new ArtistSummary(
                 g.Key,
                 g.Count(),
@@ -868,6 +959,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (selectedArtistName is not null)
             {
                 match = Artists.FirstOrDefault(a => a.Name == selectedArtistName);
+            }
+            if (match is null && SelectedTrack is not null && !IsTabSwitching)
+            {
+                var trackKey = IsArtistsTab ? SelectedTrack.Artist : SelectedTrack.EffectiveAlbumArtist;
+                match = Artists.FirstOrDefault(a => a.Name == NormalizeArtist(trackKey));
             }
 
             SelectedArtist = match;
@@ -945,6 +1041,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (selectedGenreName is not null)
             {
                 match = Genres.FirstOrDefault(g => g.Name == selectedGenreName);
+            }
+            if (match is null && SelectedTrack is not null)
+            {
+                match = Genres.FirstOrDefault(g => g.Name == NormalizeGenre(SelectedTrack.Genre));
             }
 
             SelectedGenre = match;
@@ -1031,12 +1131,12 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             var albumName = SelectedArtistAlbum.Name;
             source = _allTracks.Where(t =>
-                NormalizeArtist(t.EffectiveAlbumArtist) == artistName
+                NormalizeArtist(IsArtistsTab ? t.Artist : t.EffectiveAlbumArtist) == artistName
                 && NormalizeAlbum(t.Album) == albumName);
         }
         else if (IsArtistAllSongsView)
         {
-            source = _allTracks.Where(t => NormalizeArtist(t.EffectiveAlbumArtist) == artistName);
+            source = _allTracks.Where(t => NormalizeArtist(IsArtistsTab ? t.Artist : t.EffectiveAlbumArtist) == artistName);
         }
         else
         {
@@ -1280,7 +1380,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 {
                     FilePath = fullPath,
                     Title = metadata.Title ?? TitleFromPath(fullPath),
-                    Artist = metadata.Artist ?? "Unknown artist",
+                    Artist = metadata.Artist ?? "Unknown Artist",
                     AlbumArtist = metadata.AlbumArtist,
                     Album = metadata.Album,
                     Genre = metadata.Genre,
@@ -1413,6 +1513,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         ShowToast = false;
         ToastCover = null;
+        ToastSubtitle = "";
+        ToastDetail = "";
     }
 
     [RelayCommand]
