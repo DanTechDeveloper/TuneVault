@@ -14,76 +14,80 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 
 ## Wiring
 
-- `Program.Main` → `App.OnFrameworkInitializationCompleted` is the composition root: constructs audio/metadata/file-picker services, `ILibraryRepository` (`SqliteLibraryRepository`), and feature ViewModels (`LibraryViewModel`, `PlaybackViewModel`, `MetadataEditorViewModel`), injects them into `MainWindowViewModel` and `Views/MainWindow`. Schema is created before any command runs; `MainWindow.OnOpened` kicks off `LibraryViewModel.LoadLibraryAsync()`.
-- ViewModels split by feature, not by view file. `MainWindowViewModel` is a thin shell owning navigation and exposing `Library`, `Playback`, `Editor`; views bind nested paths (`Library.Tracks`, `Playback.NowPlayingTitle`, `Editor.EditTitle`).
-- `MainWindow` owns the 250 ms `DispatcherTimer` calling `MainWindowViewModel.RefreshPlayback()` → `PlaybackViewModel`. No Avalonia controls, timers, or storage-provider types in `ViewModels/`.
-- Compiled bindings are enabled project-wide. Every new window and `DataTemplate` needs `x:DataType` or bindings fail at build time.
-- UI actions use `[RelayCommand]` (CommunityToolkit.Mvvm); ViewModels inherit `ObservableObject` and must be `partial`. Avalonia has no `CommandManager`: use `[NotifyCanExecuteChangedFor]` or call `command.NotifyCanExecuteChanged()`.
+- `Program.Main` → `App.OnFrameworkInitializationCompleted` is the composition root.
+- ViewModels split by feature; `MainWindowViewModel` is a thin shell. Views bind nested paths (`Library.*`, `Playback.*`, `Editor.*`).
+- `MainWindow` owns the 250 ms `DispatcherTimer` → `RefreshPlayback()`. No Avalonia controls/timers/storage-provider types in `ViewModels/`.
+- Compiled bindings enabled project-wide. Every new window and `DataTemplate` needs `x:DataType`.
+- UI actions use `[RelayCommand]`; ViewModels inherit `ObservableObject` and must be `partial`. Avalonia has no `CommandManager`: use `[NotifyCanExecuteChangedFor]` or `command.NotifyCanExecuteChanged()`.
 
 ## Audio and metadata constraints
 
-- Use **NAudio 3** APIs (`NAudio.Core`/`Alsa`/`SoundFile`/`Wasapi`). Do not downgrade to NAudio 2.
-- Always decode with `SoundFileReader` (libsndfile). `AudioFileReader`/`Mp3FileReader` are Windows-only in NAudio 3.
-- Output is `AlsaOut` on Linux, `WasapiPlayer` on Windows; macOS throws `PlatformNotSupportedException`.
-- Supported formats: WAV, MP3, FLAC, OGG/Vorbis, Opus, AIFF.
-- Metadata read/write uses **TagLibSharp** (`TagLib.File.Create`).
-- File dialogs go through `IFilePickerService`.
+- Use **NAudio 3** APIs. Always decode with `SoundFileReader` (libsndfile). `AudioFileReader`/`Mp3FileReader` are Windows-only in NAudio 3.
+- Output: `AlsaOut` on Linux, `WasapiPlayer` on Windows; macOS throws `PlatformNotSupportedException`.
+- Supported: WAV, MP3, FLAC, OGG/Vorbis, Opus, AIFF. Metadata via TagLibSharp. File dialogs via `IFilePickerService`.
 
 ## Persistence
 
-- Library stored in **SQLite** via `ILibraryRepository`/`SqliteLibraryRepository` (`Microsoft.Data.Sqlite`). DB: `library.db` in `Environment.SpecialFolder.ApplicationData` + `TuneVault` (`~/.config/TuneVault/library.db` on Linux).
-- Never reference `Microsoft.Data.Sqlite` or `SqliteConnection` from `ViewModels/` or `Models/`.
+- SQLite via `ILibraryRepository`/`SqliteLibraryRepository`. DB: `library.db` in `Environment.SpecialFolder.ApplicationData` + `TuneVault`.
+- Never reference `Microsoft.Data.Sqlite`/`SqliteConnection` from `ViewModels/` or `Models/`.
 - Schema versioned with `PRAGMA user_version` (currently 2), created by `InitializeAsync()`, idempotent. v1→v2 adds `album_artist` (backfilled from `artist`).
-- Duplicate rules enforced by the database: `tracks.path_key` UNIQUE; `tracks.identity_key` UNIQUE (lower-cased title+artist, NULL for the `"Untitled track"` fallback). Imports insert the batch in one transaction and report per-row `AddOutcome`.
-- Cover art lives in `track_art` (`ON DELETE CASCADE`).
-- Removals delete the row (and its art), never the file on disk. Metadata edits write file tags *and* DB; an edit that would collide is rejected before tags are written.
+- Duplicate rules: `tracks.path_key` UNIQUE; `tracks.identity_key` UNIQUE (lower-cased title+artist, NULL for `"Untitled track"`). Imports insert the batch in one transaction and report per-row `AddOutcome`.
+- Cover art in `track_art` (`ON DELETE CASCADE`). Removals delete the row (and art), never the file. Metadata edits write file tags *and* DB; collisions rejected before tags written.
 - `Track.IsMissing` computed at load from `File.Exists`, never persisted.
-- All Songs ordering is SQL-side (`LoadAllAsync(sortBy, descending)`). `LibraryViewModel.ReloadSortedAsync` rebuilds `Tracks` but reuses existing `Track` instances by `Id` so `PlaybackViewModel`'s loaded-track reference stays valid.
-- Search and album/artist/genre filtering are **in-memory**; `_allTracks` loaded once. `SearchText` debounces 350 ms (`System.Threading.Timer`) and filters in memory. Search is **per view** and never switches tabs.
-- Albums view: list → filtered songs. Artists view: artist list (grouped by `Track.Artist`) → all artist songs. Album Artists view: artist list (grouped by `Track.EffectiveAlbumArtist`) → artist detail (albums + all-songs entry) → album songs/all songs. Genres view: genre list → all genre songs. Tab switching rebuilds the shared artist collection for the active grouping.
-- Tab switching resets drill-down state (`SelectedAlbum`, `SelectedArtist`, `SelectedGenre`) to Layer 1.
+- All Songs ordering is SQL-side (`LoadAllAsync(sortBy, descending)`). `ReloadSortedAsync` rebuilds `Tracks` but reuses `Track` instances by `Id` so `PlaybackViewModel`'s loaded-track reference stays valid.
+- Search and album/artist/genre filtering are in-memory; `_allTracks` loaded once. `SearchText` debounces 350 ms and filters in memory. Search is per view, never switches tabs.
+
+## Views / layers
+
+- Albums: list → filtered songs. Artists: artist list → all artist songs. Album Artists: artist list → artist detail (albums + all-songs entry) → album songs / all songs. Genres: genre list → all genre songs. Tab switching resets drill-down state.
+- Tab switching resets `SelectedAlbum`, `SelectedArtist`, `SelectedGenre` to Layer 1.
 
 ## Reusable UI
 
-- `Views/TrackRow.axaml` is the shared track row (cover, title, artist/album, genre/year, play, duration, edit, NOW PLAYING indicator), used via `TrackRowTemplate` in `App.axaml`. Command bindings use `$parent[Window]` to reach `MainWindowViewModel`.
+- `Views/TrackRow.axaml` shared track row, used via `TrackRowTemplate` in `App.axaml`. Command bindings use `$parent[Window]` to reach `MainWindowViewModel`.
 - `AlbumRowTemplate` in `App.axaml` renders album tiles.
-- Google Material Icons via `Material.Icons.Avalonia` 2.4.1; styles registered in `App.axaml`. Button backgrounds are transparent for icon-only buttons.
-- Sort controls live in each view header and are context-aware through `Library.SortFields`/`Library.SortContext`.
-- `App.axaml` holds design tokens (colors, spacing, radius, typography, `AppFontFamily`). Views should use `{DynamicResource ...Brush}` for colors and `{StaticResource FontSize...}` for text sizes; spacing/radius are mostly literals (Avalonia `Thickness`/`CornerRadius` don't accept `x:Double` tokens).
+- Material Icons via `Material.Icons.Avalonia` 2.4.1; styles in `App.axaml`. Icon-only buttons have transparent backgrounds.
+- Sort controls live in each view header, context-aware via `Library.SortFields`/`Library.SortContext`.
+- `App.axaml` holds design tokens. Views use `{DynamicResource ...Brush}` for colors and `{StaticResource FontSize...}` for text sizes.
 
 ## Playback navigation
 
-- Next/Prev follows the **queue captured when the current track was loaded** (so switching views does not hijack playback); when nothing is loaded, it falls back to the current view's song list (`Tracks`/`AlbumTracks`/`ArtistSongs`/`GenreSongs`). Boundary presses show a toast instead of wrapping or silently no-oping.
-- No wrap-around at boundaries; Previous restarts the current track at the first track.
-- No auto-advance on track end (empty "track finished" branch stays as-is).
+- Next/Prev follows the queue captured when the current track was loaded (so switching views does not hijack playback); when nothing loaded, falls back to the current view's song list. Boundary presses show a toast instead of wrapping.
+- No wrap-around; Previous restarts the current track at the first track.
+- No auto-advance on track end.
+- `_loadedQueue` is captured at play time; on a sort change in the **same** view it is rebuilt from `CurrentQueue` so Next/Prev follow the new sort. Captured queue is not touched when sorting a different view.
+- Boundary toasts are context-aware (coarse labels: All Songs / Album / Artist Songs / Album Artist Songs / Genre).
 
 ## Sorting
 
 - `TrackSortField` is the shared sort key. `Library.SortFields` is context-aware and changes with `SortContext`/`CurrentTab`.
-- List layers sort by their natural keys (name/artist/genre/year) with direction. Track layers use `SortTracks` with `SortField`.
 - `ReloadSortedAsync` refreshes every collection but reuses `Track` instances by `Id`.
-- Summary collections are rebuilt on refresh; selection is reselected by key to avoid collapsing to Layer 1 during search/sort.
+- Summary collections are rebuilt on refresh; selection is reselected by key.
+- `SortContext.GenresList` → Genre only; `AlbumArtistAlbums` → Title + Year; `AlbumArtistTracks` → Title, Genre (no Album/Year).
 
 ## Testing
 
 - Test project: `TuneVault.Tests/` (xUnit + Avalonia.Headless.XUnit + Moq).
 - Run: `cd TuneVault.Tests && dotnet test`
-- Main project excludes `TuneVault.Tests/` via `Compile Remove` in `TuneVault.csproj`.
-- Covers Models, Services, ViewModels, and XAML smoke tests for compiled bindings.
-- Edge cases: duplicate detection, missing files, unknown album/artist/genre, search filtering, in-memory reload, navigation boundaries, playback indicators.
+- Single test: `cd TuneVault.Tests && dotnet test --filter "FullyQualifiedName~<TestName>"`
+- Main project excludes `TuneVault.Tests/` via `Compile Remove`.
 
 ## Gotchas
 
-- `_allTracks` is the source for in-memory rebuilds. `SetTrackPlayingState` must update it too, and `Remove` must drop the track from it, or stale rows/reappearances occur. `GenreSongs` is included in playing-state sync.
-- `ClearAllPlayingState()` (LibraryViewModel) clears `IsPlaying` on every track instance held anywhere; call it on playback transitions to avoid stale "NOW PLAYING" indicators.
+- `_allTracks` is the source for in-memory rebuilds. `SetTrackPlayingState` must update it too, and `Remove` must drop the track from it.
+- `ClearAllPlayingState()` (LibraryViewModel) clears `IsPlaying` on every track instance held anywhere; call it on playback transitions.
 - Summary collections are immutable records rebuilt on refresh; reselect by key instead of reusing instances.
-- `TrackRow` uses `$parent[Window]` to reach `MainWindowViewModel`; if it fails at runtime, resolve the Window DataContext in code-behind.
-- Search has no-results borders with a "Clear Field" button (`ClearSearchCommand`, aliases `ClearSearchText`/`ClearField`) in All Songs/Albums/Album Artists/Artists/Genres views.
-- App theme is set to `Dark` in `App.axaml`.
+- `TrackRow` uses `$parent[Window]`; if it fails at runtime, resolve the Window DataContext in code-behind.
+- Search has no-results borders with a "Clear Field" button (`ClearSearchCommand`, aliases `ClearSearchText`/`ClearField`).
+- App theme is `Dark` in `App.axaml`.
 - Do not edit generated `obj/`/`bin/` artifacts.
-- `Track` overrides `Equals`/`GetHashCode` by `Id`, so `ListBox` selection matches across collection instances (All Songs vs filtered tabs). `ApplyTrackMetadata` (LibraryViewModel) propagates edits (including `AlbumArtist`) to every instance of a track and rebuilds summary collections; call it after mutating a track or rows go stale.
-- Metadata editor validates `EditYear` (empty → 0/unknown; otherwise must parse as uint ≤ 9999). Invalid input sets `EditYearError` and aborts save without closing the modal.
-- Unknown fallbacks: artist uses `"Unknown Artist"` (capital A) everywhere; album/genre are stored as `null` and normalized to `"Unknown Album"`/`"Unknown Genre"` in views; search treats null album/genre as their bucket names. Title fallback is `"Untitled track"` (identity key becomes null).
-- Global `FontFamily` is set via `MainWindow.FontFamily` (not `Application.Styles` — `Control` base lacks `FontFamily` for grouped selectors). Views inherit it.
-- Use `{DynamicResource ...}` (not `{StaticResource}`) for token lookups inside views/styles; `StaticResource` fails at runtime in those contexts.
-- Modal scrims use `#88000000` for text readability over any cover art; slider track/thumb use `#40FFFFFF`/`#FFFFFF`.
+- `Track` overrides `Equals`/`GetHashCode` by `Id`.
+- `ApplyTrackMetadata` (LibraryViewModel) propagates edits (including `AlbumArtist`) to every instance of a track and rebuilds summary collections; call it after mutating a track.
+- Metadata editor validates `EditYear` (empty → 0/unknown; otherwise must parse as uint ≤ 9999). Invalid input sets `EditYearError` and aborts save without closing the modal. `Year == 0` displays as "Unknown Year" in `GenreDisplay`.
+- Unknown fallbacks: artist uses `"Unknown Artist"`; album/genre stored as `null`, normalized to `"Unknown Album"`/`"Unknown Genre"` in views; search treats null album/genre as their bucket names. Title fallback is `"Untitled track"`. Year `0` = unknown.
+- Global `FontFamily` is set via `MainWindow.FontFamily`.
+- Use `{DynamicResource ...}` (not `{StaticResource}`) for token lookups inside views/styles.
+- Modal scrims use `#88000000`; slider track/thumb use `#40FFFFFF`/`#FFFFFF`.
+- `ArtistSummary` first layer (Album Artists view) shows `AlbumCount` ("1 Album" / "N Albums"), not track count.
+- Toast overlay width 320–460 to avoid text overlap.
+- `IsAlbumArtistsTab` (not `IsAlbumArtists`) is the LibraryViewModel flag for the Album Artists tab.

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:TuneVault.ViewModels"
              xmlns:models="using:TuneVault.Models"
+             xmlns:services="using:TuneVault.Services"
              xmlns:views="using:TuneVault.Views"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d"
@@ -33,7 +34,13 @@
                 <ComboBox ItemsSource="{Binding Library.SortFields}"
                           SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
                           Width="150"
-                          IsEnabled="{Binding !Library.IsLoading}"/>
+                          IsEnabled="{Binding !Library.IsLoading}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="services:TrackSortField">
+                            <TextBlock Text="{Binding Converter={StaticResource SortFieldDisplayNameConverter}, ConverterParameter=AlbumName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button Content="{Binding Library.SortDirectionLabel}"
                         Command="{Binding Library.ToggleSortDirectionCommand}"
                         Padding="10,6"
@@ -81,11 +88,6 @@
                             <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} tracks'}"
                                        FontSize="{StaticResource FontSizeSmMd}"
                                        Opacity="0.65"/>
-
-                            <TextBlock Text="{Binding Year, StringFormat='{}{0}'}"
-                                       FontSize="{StaticResource FontSizeSmMd}"
-                                       Opacity="0.65"
-                                       IsVisible="{Binding HasYear}"/>
                         </StackPanel>
                     </Grid>
                 </DataTemplate>

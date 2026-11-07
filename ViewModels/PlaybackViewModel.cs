@@ -24,6 +24,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     // Queue captured when a track is loaded, so Prev/Next follow the playing
     // track even after the user switches views. Null falls back to the view queue.
     private List<Track>? _loadedQueue;
+    private string _loadedQueueLabel = "All Songs";
+    private string _loadedQueueSource = "AllSongs";
     private bool _suppressSeek;
     private bool _disposed;
 
@@ -135,6 +137,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             }
             _loadedTrack = null;
             _loadedQueue = null;
+            _loadedQueueLabel = "All Songs";
+            _loadedQueueSource = "AllSongs";
             IsPlaying = false;
             // Reset slider to 0 so the state is "fresh", not stale at end.
             _suppressSeek = true;
@@ -201,6 +205,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 if (captureQueue)
                 {
                     _loadedQueue = CurrentQueue.ToList();
+                    _loadedQueueLabel = CurrentQueueLabel;
+                    _loadedQueueSource = CurrentQueueSource;
                 }
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
@@ -263,6 +269,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
                 _loadedTrack = track;
                 _loadedQueue = CurrentQueue.ToList();
+                _loadedQueueLabel = CurrentQueueLabel;
+                _loadedQueueSource = CurrentQueueSource;
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
                 DurationSeconds = duration.TotalSeconds;
@@ -315,6 +323,23 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         _library.IsArtistDetailView ? _library.ArtistSongs :
         _library.IsGenreSongsView ? _library.GenreSongs :
         _library.Tracks; // AllSongs (default, incl. fallback for list views)
+
+    private string CurrentQueueLabel =>
+        _library.IsAlbumDetailView ? "Album" :
+        _library.IsArtistDetailView ? (_library.IsAlbumArtistsTab ? "Album Artist Songs" : "Artist Songs") :
+        _library.IsGenreSongsView ? "Genre" :
+        "All Songs";
+
+    private string CurrentQueueSource =>
+        _library.IsAlbumDetailView ? "Album" :
+        _library.IsArtistDetailView ? "Artist" :
+        _library.IsGenreSongsView ? "Genre" :
+        "AllSongs";
+
+    private string ActiveQueueLabel =>
+        _loadedTrack is not null && _loadedQueue is { Count: > 0 }
+            ? _loadedQueueLabel
+            : CurrentQueueLabel;
 
     /// <summary>
     /// The queue Prev/Next actually navigate. While a track is loaded this is the
@@ -379,7 +404,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         }
         if (currentIdx < 0 || currentIdx + 1 >= queue.Count)
         {
-            ShowBoundaryToast("Last track", "No next track in this list.");
+            ShowBoundaryToast("Last track", $"No next track in {ActiveQueueLabel}.");
             return; // no next track (no wrap at the boundary)
         }
 
@@ -426,7 +451,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         }
         if (idx < 0)
         {
-            ShowBoundaryToast("No previous track", "This track is not in the playing queue.");
+            ShowBoundaryToast("No previous track", $"This track is not in the playing {ActiveQueueLabel} queue.");
             return;
         }
 
@@ -436,7 +461,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             return;
         }
 
-        ShowBoundaryToast("First track", "Already at the first track.");
+        ShowBoundaryToast("First track", $"Already at the first track of {ActiveQueueLabel}.");
 
         // At the first track: restart the current track.
         try
@@ -515,6 +540,32 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             OnPropertyChanged(nameof(NowPlayingArtist));
         }
+
+        // Re-sort the captured queue when the sort changes in the same view the
+        // track was played from, so Next/Prev follow the new order. Do not touch
+        // the captured queue for other views (avoids hijacking playback).
+        if (e.PropertyName == nameof(LibraryViewModel.SortField) ||
+            e.PropertyName == nameof(LibraryViewModel.IsSortDescending))
+        {
+            if (_loadedTrack is not null && _loadedQueue is not null &&
+                _loadedQueueSource == CurrentQueueSource)
+            {
+                // Only rebuild if the loaded track is still present in the view.
+                var stillPresent = false;
+                foreach (var t in CurrentQueue)
+                {
+                    if (t.Id == _loadedTrack.Id)
+                    {
+                        stillPresent = true;
+                        break;
+                    }
+                }
+                if (stillPresent)
+                {
+                    _loadedQueue = CurrentQueue.ToList();
+                }
+            }
+        }
     }
 
     private void OnTrackRemoved(Track track)
@@ -525,6 +576,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             if (_loadedQueue.Count == 0)
             {
                 _loadedQueue = null;
+                _loadedQueueLabel = "All Songs";
+                _loadedQueueSource = "AllSongs";
             }
         }
 
@@ -566,6 +619,8 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
         _loadedTrack = null;
         _loadedQueue = null;
+        _loadedQueueLabel = "All Songs";
+        _loadedQueueSource = "AllSongs";
         NowPlayingTrack = null;
         IsPlaying = false;
         DurationSeconds = 0;

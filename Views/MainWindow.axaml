@@ -369,8 +369,8 @@
                 BorderThickness="1"
                 CornerRadius="12"
                 Padding="12"
-                MinWidth="280"
-                MaxWidth="380"
+                MinWidth="320"
+                MaxWidth="460"
                 BoxShadow="0 8 24 0 #40000000"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
@@ -639,7 +639,7 @@
                                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Editor.EditGenre, Mode=TwoWay}" Watermark="Music genre"/>
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Year" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMd}"/>
-                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Editor.EditYear, Mode=TwoWay}" Watermark="Release year"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Editor.EditYear, Mode=TwoWay}" Watermark="Release year (blank = Unknown Year)"/>
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Opacity="0.2"/>

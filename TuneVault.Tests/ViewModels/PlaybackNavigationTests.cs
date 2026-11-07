@@ -263,7 +263,7 @@ public class PlaybackNavigationTests
 
             Assert.Same(library.Tracks[2], vm.NowPlayingTrack);
             Assert.True(library.ShowToast);
-            Assert.Equal("No next track in this list.", library.ToastMessage);
+            Assert.Equal("No next track in All Songs.", library.ToastMessage);
         }
         finally { Cleanup(dbPath, tempFiles); }
     }
@@ -285,7 +285,7 @@ public class PlaybackNavigationTests
             player.Verify(p => p.Seek(TimeSpan.Zero), Times.Once);
             Assert.Equal("Song0", vm.NowPlayingTrack!.Title);
             Assert.True(library.ShowToast);
-            Assert.Equal("Already at the first track.", library.ToastMessage);
+            Assert.Equal("Already at the first track of All Songs.", library.ToastMessage);
         }
         finally { Cleanup(dbPath, tempFiles); }
     }
@@ -339,7 +339,7 @@ public class PlaybackNavigationTests
             vm.NextCommand.Execute(null);
 
             Assert.True(library.ShowToast);
-            Assert.Equal("No next track in this list.", library.ToastMessage);
+            Assert.Equal("No next track in All Songs.", library.ToastMessage);
             Assert.Equal("Song1", vm.NowPlayingTrack!.Title);
         }
         finally { Cleanup(dbPath, tempFiles); }

@@ -20,6 +20,8 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.
 - **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
 - **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, Album Artists, Artists, and Genres views, with a "NOW PLAYING" indicator and metadata (including year/unknown genre).
+- **Context-Aware Boundary Toasts**: Next/Prev at list boundaries report which view hit the boundary (All Songs / Album / Artist Songs / Album Artist Songs / Genre).
+- **Unknown Year Display**: Tracks with a missing year show "Unknown Year" in the track row and leave the edit field blank.
 - **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields.
 - **Clear Search & No-Results States**: When a search returns no results, views show a clarifying message and a "Clear Field" button that resets the search and restores all rows.
 - **Accurate Playback Indicators**: Track rows clear "NOW PLAYING" and revert to the play icon when a track ends or playback moves; selecting a new track marks only that row as playing.
@@ -37,6 +39,8 @@ A modern, fast, and lightweight local music player desktop application built wit
 ## Getting Started
 
 ### Build
+
+> If `dotnet --version` prints 8.x, use the SDK 9 shim at `~/.local/bin/dotnet` (see `AGENTS.md`).
 
 ```bash
 dotnet build TuneVault.csproj

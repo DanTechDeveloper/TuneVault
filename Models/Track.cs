@@ -77,7 +77,7 @@ public sealed partial class Track : ObservableObject
     /// <summary>Genre label for the track row, including year when available.</summary>
     public string GenreDisplay =>
         (string.IsNullOrWhiteSpace(Genre) ? "Unknown Genre" : Genre) +
-        (Year > 0 ? $" - {Year}" : string.Empty);
+        (Year > 0 ? $" - {Year}" : " - Unknown Year");
 
     /// <summary>Album artist for grouping, falling back to track artist when unset.</summary>
     public string EffectiveAlbumArtist => string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist!;

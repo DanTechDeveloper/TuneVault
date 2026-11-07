@@ -301,16 +301,16 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<TrackSortField> SortFields => SortContext switch
     {
-        SortContext.AlbumsList => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Year },
-        SortContext.ArtistsList => new[] { TrackSortField.Artist, TrackSortField.Year },
-        SortContext.AlbumArtistsList => new[] { TrackSortField.Artist, TrackSortField.Year },
+        SortContext.AlbumsList => new[] { TrackSortField.Title, TrackSortField.Artist},
+        SortContext.ArtistsList => new[] { TrackSortField.Artist },
+        SortContext.AlbumArtistsList => new[] { TrackSortField.Artist },
         SortContext.AlbumArtistAlbums => new[] { TrackSortField.Title, TrackSortField.Year },
-        SortContext.AlbumArtistTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
-        SortContext.AlbumArtistAllTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
-        SortContext.GenresList => new[] { TrackSortField.Genre, TrackSortField.Year },
+        SortContext.AlbumArtistTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre },        SortContext.AlbumArtistAllTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+        SortContext.GenresList => new[] { TrackSortField.Genre },
         SortContext.GenreTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Year },
-        _ => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
-    };
+        SortContext.AlbumTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Genre, TrackSortField.Year },
+        SortContext.ArtistTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+        _ => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },    };
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAlbumDetailView))]
@@ -924,7 +924,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 g.Key,
                 g.Count(),
                 g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
-                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max()))
+                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max(),
+                AlbumCount: IsArtistsTab ? 0 : g.Select(t => NormalizeAlbum(t.Album)).Distinct().Count()))
             .Where(a => string.IsNullOrWhiteSpace(term)
                         || a.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -1005,20 +1006,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             .Select(g => new GenreSummary(
                 g.Key,
                 g.Count(),
-                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData,
-                Year: (int)g.Select(t => t.Year).Where(y => y > 0).DefaultIfEmpty((uint)0).Max()))
-            .Where(g => string.IsNullOrWhiteSpace(term)
-                        || g.Name.Contains(term.Trim(), StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
+                g.OrderBy(t => t.Title).FirstOrDefault()?.PictureData));
         IOrderedEnumerable<GenreSummary> genreOrdered;
         switch (SortField)
         {
-            case TrackSortField.Year:
-                genreOrdered = IsSortDescending
-                    ? groups.OrderByDescending(g => g.Year)
-                    : groups.OrderBy(g => g.Year);
-                break;
             default:
                 genreOrdered = IsSortDescending
                     ? groups.OrderByDescending(g => g.Name, StringComparer.OrdinalIgnoreCase)

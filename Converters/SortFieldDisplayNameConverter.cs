@@ -14,9 +14,16 @@ public sealed class SortFieldDisplayNameConverter : IValueConverter
             return value?.ToString() ?? string.Empty;
         }
 
-        if (parameter is string context && context == "AlbumsList" && field == TrackSortField.Title)
+        if (parameter is string context)
         {
-            return "Album Name";
+            if (context == "AlbumsList" && field == TrackSortField.Title)
+            {
+                return "Album Name";
+            }
+            if (context == "AlbumName" && field == TrackSortField.Album)
+            {
+                return "Album Name";
+            }
         }
 
         return field.ToString() ?? string.Empty;

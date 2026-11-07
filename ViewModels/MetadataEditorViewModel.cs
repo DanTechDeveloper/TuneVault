@@ -183,7 +183,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         {
             if (!uint.TryParse(EditYear.Trim(), out newYear) || newYear > 9999)
             {
-                EditYearError = "Enter a valid year (1–9999) or leave blank.";
+                EditYearError = "Enter a valid year (1–9999) or leave blank for Unknown Year.";
                 return;
             }
         }
