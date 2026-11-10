@@ -37,8 +37,9 @@ public partial class App : Application
             {
                 Task.Run(() => repository.InitializeAsync()).GetAwaiter().GetResult();
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"TuneVault: database initialization failed: {ex}");
             }
 
             var library = new LibraryViewModel(metadataReader, filePicker, repository);

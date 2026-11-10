@@ -63,7 +63,8 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - `TrackSortField` is the shared sort key. `Library.SortFields` is context-aware and changes with `SortContext`/`CurrentTab`.
 - `ReloadSortedAsync` refreshes every collection but reuses `Track` instances by `Id`.
 - Summary collections are rebuilt on refresh; selection is reselected by key.
-- `SortContext.GenresList` → Genre only; `AlbumArtistAlbums` → Title + Year; `AlbumArtistTracks` → Title, Genre (no Album/Year).
+- Missing album/genre/year sort last in both directions; then the chosen column, then title (always ascending).
+- `SortContext.GenresList` → Genre only; `AlbumArtistAlbums` → Title + Year; `AlbumArtistTracks` → Title, Album, Genre; `AlbumArtistAllTracks` → Title, Album, Genre, Year.
 
 ## Testing
 
@@ -84,10 +85,12 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - `Track` overrides `Equals`/`GetHashCode` by `Id`.
 - `ApplyTrackMetadata` (LibraryViewModel) propagates edits (including `AlbumArtist`) to every instance of a track and rebuilds summary collections; call it after mutating a track.
 - Metadata editor validates `EditYear` (empty → 0/unknown; otherwise must parse as uint ≤ 9999). Invalid input sets `EditYearError` and aborts save without closing the modal. `Year == 0` displays as "Unknown Year" in `GenreDisplay`.
+- Metadata editor writes the `AlbumArtists` tag from `track.AlbumArtist` (falling back to the new artist) on save.
 - Unknown fallbacks: artist uses `"Unknown Artist"`; album/genre stored as `null`, normalized to `"Unknown Album"`/`"Unknown Genre"` in views; search treats null album/genre as their bucket names. Title fallback is `"Untitled track"`. Year `0` = unknown.
 - Global `FontFamily` is set via `MainWindow.FontFamily`.
 - Use `{DynamicResource ...}` (not `{StaticResource}`) for token lookups inside views/styles.
 - Modal scrims use `#88000000`; slider track/thumb use `#40FFFFFF`/`#FFFFFF`.
 - `ArtistSummary` first layer (Album Artists view) shows `AlbumCount` ("1 Album" / "N Albums"), not track count.
+- Removal deletes by `Id` from every collection (`Tracks`, `AlbumTracks`, `ArtistSongs`, `GenreSongs`, `_allTracks`), so it works during search/filter or from another view.
 - Toast overlay width 320–460 to avoid text overlap.
 - `IsAlbumArtistsTab` (not `IsAlbumArtists`) is the LibraryViewModel flag for the Album Artists tab.

@@ -446,9 +446,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
             await ImportPathsAsync(paths);
         }
-        catch
+        catch (Exception ex)
         {
             IsLoading = false;
+            System.Diagnostics.Debug.WriteLine($"TuneVault: add files failed: {ex}");
         }
     }
 
@@ -495,9 +496,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
             await ImportPathsAsync(files, folder);
         }
-        catch
+        catch (Exception ex)
         {
             IsLoading = false;
+            System.Diagnostics.Debug.WriteLine($"TuneVault: add folder failed: {ex}");
         }
     }
 
@@ -543,8 +545,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             // selection highlight until the user explicitly clicks a track.
 
         }
-        catch
+        catch (Exception ex)
         {
+            _libraryLoaded = false;
+            System.Diagnostics.Debug.WriteLine($"TuneVault: library load failed: {ex}");
         }
         finally
         {
@@ -780,10 +784,21 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     partial void OnCurrentTabChanged(NavigationTab value) => UpdateSortContext();
 
-    private IOrderedEnumerable<Track> SortTracks(IEnumerable<Track> source) =>
-        IsSortDescending
-            ? source.OrderByDescending(t => SortKey(t)).ThenByDescending(t => t.Title)
-            : source.OrderBy(t => SortKey(t)).ThenBy(t => t.Title);
+    private IOrderedEnumerable<Track> SortTracks(IEnumerable<Track> source)
+    {
+        // Mirror LoadAllAsync: tracks with a missing album/genre/year sort last
+        // in both directions, then the chosen column, then title (always asc).
+        Func<Track, int> missing = t => SortField switch
+        {
+            TrackSortField.Album => string.IsNullOrWhiteSpace(t.Album) ? 1 : 0,
+            TrackSortField.Genre => string.IsNullOrWhiteSpace(t.Genre) ? 1 : 0,
+            TrackSortField.Year => t.Year == 0 ? 1 : 0,
+            _ => 0,
+        };
+        return IsSortDescending
+            ? source.OrderBy(missing).ThenByDescending(t => SortKey(t)).ThenBy(t => t.Title)
+            : source.OrderBy(missing).ThenBy(t => SortKey(t)).ThenBy(t => t.Title);
+    }
 
     private object? SortKey(Track t) => SortField switch
     {
@@ -843,8 +858,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 break;
             case TrackSortField.Year:
                 albumOrdered = IsSortDescending
-                    ? groups.OrderByDescending(a => a.Year)
-                    : groups.OrderBy(a => a.Year);
+                    ? groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenBy(a => a.Year);
                 break;
             default:
                 albumOrdered = IsSortDescending
@@ -935,8 +950,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             case TrackSortField.Year:
                 artistOrdered = IsSortDescending
-                    ? groups.OrderByDescending(a => a.Year)
-                    : groups.OrderBy(a => a.Year);
+                    ? groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenBy(a => a.Year);
                 break;
             default:
                 artistOrdered = IsSortDescending
@@ -1094,8 +1109,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             case TrackSortField.Year:
                 albumOrdered = IsSortDescending
-                    ? groups.OrderByDescending(a => a.Year)
-                    : groups.OrderBy(a => a.Year);
+                    ? groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenByDescending(a => a.Year)
+                    : groups.OrderBy(a => a.Year == 0 ? 1 : 0).ThenBy(a => a.Year);
                 break;
             default:
                 albumOrdered = IsSortDescending
@@ -1416,10 +1431,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 IsLoading = false;
                 LoadingStatusText = "";
+                System.Diagnostics.Debug.WriteLine($"TuneVault: import persist failed: {ex}");
                 return;
             }
         }
@@ -1560,22 +1576,31 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>Removes a track from the library and raises <see cref="TrackRemoved"/>.</summary>
     public void Remove(Track track)
     {
-        var index = Tracks.IndexOf(track);
-        var wasSelected = ReferenceEquals(SelectedTrack, track);
-
-        if (index < 0)
+        var index = -1;
+        for (var i = 0; i < Tracks.Count; i++)
         {
-            return;
+            if (Tracks[i].Id == track.Id) { index = i; break; }
         }
+        var wasSelected = SelectedTrack?.Id == track.Id;
 
-        Tracks.Remove(track);
+        // Remove by Id (not reference) from every collection that may hold
+        // this track, so removal works even during search/filter or from
+        // another view.
+        for (var i = Tracks.Count - 1; i >= 0; i--)
+            if (Tracks[i].Id == track.Id) Tracks.RemoveAt(i);
+        for (var i = AlbumTracks.Count - 1; i >= 0; i--)
+            if (AlbumTracks[i].Id == track.Id) AlbumTracks.RemoveAt(i);
+        for (var i = ArtistSongs.Count - 1; i >= 0; i--)
+            if (ArtistSongs[i].Id == track.Id) ArtistSongs.RemoveAt(i);
+        for (var i = GenreSongs.Count - 1; i >= 0; i--)
+            if (GenreSongs[i].Id == track.Id) GenreSongs.RemoveAt(i);
         _allTracks.RemoveAll(t => t.Id == track.Id);
 
         if (wasSelected || SelectedTrack is null)
         {
             SelectedTrack = Tracks.Count == 0
                 ? null
-                : Tracks[Math.Min(index, Tracks.Count - 1)];
+                : Tracks[Math.Min(Math.Max(index, 0), Tracks.Count - 1)];
         }
 
         TrackRemoved?.Invoke(track);

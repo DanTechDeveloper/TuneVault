@@ -227,6 +227,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
                     using var tagFile = TagLib.File.Create(track.FilePath);
                     tagFile.Tag.Title = newTitle;
                     tagFile.Tag.Performers = new[] { newArtist };
+                    tagFile.Tag.AlbumArtists = new[] { string.IsNullOrWhiteSpace(track.AlbumArtist) ? newArtist : track.AlbumArtist! };
                     tagFile.Tag.Album = newAlbum ?? "";
                     tagFile.Tag.Genres = string.IsNullOrEmpty(newGenre) ? Array.Empty<string>() : new[] { newGenre };
                     tagFile.Tag.Year = newYear;
@@ -262,8 +263,9 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         {
             await _library.PersistTrackAsync(track);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"TuneVault: persist track failed: {ex}");
         }
 
         // Reuse the window-level toast so the edit is confirmed the same way

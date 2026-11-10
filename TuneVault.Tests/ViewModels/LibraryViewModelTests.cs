@@ -205,4 +205,32 @@ public class LibraryViewModelTests
         }
         finally { Cleanup(dbPath); }
     }
+
+    [AvaloniaFact]
+    public async Task Remove_DuringSearch_RemovesFromAllCollections()
+    {
+        var (vm, dbPath) = CreateVm();
+        try
+        {
+            var repo = new SqliteLibraryRepository(dbPath);
+            await repo.AddRangeAsync(new[] {
+                new Track { FilePath = "/tmp/a.mp3", Title = "Apple", Artist = "A", Duration = TimeSpan.FromSeconds(10) },
+                new Track { FilePath = "/tmp/b.mp3", Title = "Banana", Artist = "B", Duration = TimeSpan.FromSeconds(10) },
+            });
+            await vm.LoadLibraryAsync();
+
+            vm.SearchText = "Apple";
+            await Task.Delay(500);
+            Assert.Single(vm.Tracks);
+
+            var target = vm.Tracks[0];
+            vm.Remove(target);
+
+            vm.SearchText = "";
+            await Task.Delay(500);
+            Assert.Single(vm.Tracks);
+            Assert.DoesNotContain(vm.Tracks, t => t.Title == "Apple");
+        }
+        finally { Cleanup(dbPath); }
+    }
 }
