@@ -127,7 +127,18 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             DurationSeconds > 0 &&
             _audioPlayer.Position >= _audioPlayer.Duration - TimeSpan.FromMilliseconds(500))
         {
-            // track finished — clean up so the next click goes through the
+            // Track finished: auto-advance within the captured queue (the same
+            // order Next uses). Next() no-ops at the boundary, so fall through.
+            var before = _loadedTrack;
+            Next();
+            // Next() no-ops at the boundary (or on a missing file): only skip the
+            // cleanup when it actually started playback.
+            if (!ReferenceEquals(_loadedTrack, before) || _audioPlayer.IsPlaying)
+            {
+                return;
+            }
+
+            // No next track: clean up so the next click goes through the
             // full load branch instead of the (now stale) "same track" toggle
             try { _audioPlayer.Stop(); } catch { }
             _library.ClearAllPlayingState();
@@ -210,8 +221,12 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 }
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
-                DurationSeconds = duration.TotalSeconds;
+                // Reset the slider before the duration changes: shrinking the
+                // slider Maximum while its Value sits at the old track's end
+                // makes the slider write that end position back as a seek, so
+                // the new track instantly "finishes" and skips a song.
                 SetPosition(0);
+                DurationSeconds = duration.TotalSeconds;
                 _audioPlayer.Play();
             }
             else
@@ -273,8 +288,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 _loadedQueueSource = CurrentQueueSource;
                 NowPlayingTrack = track;
                 StopCommand.NotifyCanExecuteChanged();
-                DurationSeconds = duration.TotalSeconds;
+                // Same order as PlayTrackCore: reset the slider before the
+                // duration shrinks, or it seeks the new track to its end.
                 SetPosition(0);
+                DurationSeconds = duration.TotalSeconds;
             }
 
             if (_audioPlayer.IsPlaying)

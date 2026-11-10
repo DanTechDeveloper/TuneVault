@@ -54,7 +54,7 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 
 - Next/Prev follows the queue captured when the current track was loaded (so switching views does not hijack playback); when nothing loaded, falls back to the current view's song list. Boundary presses show a toast instead of wrapping.
 - No wrap-around; Previous restarts the current track at the first track.
-- No auto-advance on track end.
+- Auto-advances to the next track in the captured queue when a track ends; stops (with a "Last track" toast) at the end of the queue. No wrap-around.
 - `_loadedQueue` is captured at play time; on a sort change in the **same** view it is rebuilt from `CurrentQueue` so Next/Prev follow the new sort. Captured queue is not touched when sorting a different view.
 - Boundary toasts are context-aware (coarse labels: All Songs / Album / Artist Songs / Album Artist Songs / Genre).
 

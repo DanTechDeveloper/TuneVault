@@ -322,6 +322,104 @@ public class PlaybackNavigationTests
         finally { Cleanup(dbPath, tempFiles); }
     }
 
+    private static void SimulateTrackEnded(Mock<IAudioPlayer> player, PlaybackViewModel vm)
+    {
+        player.Setup(p => p.IsPlaying).Returns(false);
+        player.Setup(p => p.Position).Returns(TimeSpan.FromSeconds(100));
+        player.Setup(p => p.Duration).Returns(TimeSpan.FromSeconds(100));
+        vm.IsPlaying = true;
+        vm.RefreshPlayback();
+    }
+
+    [AvaloniaFact]
+    public void RefreshPlayback_TrackEnded_AutoAdvancesToNext()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[0]);
+
+            SimulateTrackEnded(player, vm);
+
+            Assert.Equal("Song1", vm.NowPlayingTrack!.Title);
+            player.Verify(p => p.Load(tempFiles[1]), Times.Once);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void RefreshPlayback_LastTrackEnded_StopsWithoutWrapping()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[2]);
+
+            SimulateTrackEnded(player, vm);
+
+            Assert.Equal("Song2", vm.NowPlayingTrack!.Title); // kept for display
+            Assert.False(vm.IsPlaying);
+            Assert.Equal(0, vm.PositionSeconds);
+            Assert.False(vm.StopCommand.CanExecute(null));
+            Assert.Equal("No next track in All Songs.", library.ToastMessage);
+            player.Verify(p => p.Load(tempFiles[0]), Times.Never);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
+    [AvaloniaFact]
+    public void RefreshPlayback_UserSeeksToEnd_AdvancesExactlyOneTrack()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            // Next track is shorter, like a real playlist.
+            player.Setup(p => p.Load(tempFiles[1])).Returns(TimeSpan.FromSeconds(80));
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[0]);
+
+            // Stand-in for the Slider: when Maximum (DurationSeconds) shrinks
+            // while Value sits at the old track's end, it writes the clamped
+            // value back to PositionSeconds.
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(PlaybackViewModel.DurationSeconds))
+                {
+                    vm.PositionSeconds = Math.Min(vm.PositionSeconds, vm.DurationSeconds);
+                }
+            };
+
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+            player.Setup(p => p.Position).Returns(TimeSpan.FromSeconds(100));
+            player.Setup(p => p.Duration).Returns(TimeSpan.FromSeconds(100));
+            vm.PositionSeconds = 100; // user drags the slider to the exact end
+
+            player.Setup(p => p.IsPlaying).Returns(false);
+            player.Invocations.Clear();
+            vm.RefreshPlayback();
+
+            Assert.Equal("Song1", vm.NowPlayingTrack!.Title);
+            // No stale seek may land on the freshly loaded track.
+            player.Verify(p => p.Seek(It.IsAny<TimeSpan>()), Times.Never);
+
+            // Next tick: the new track is at 0 and playing, so no extra skip.
+            player.Setup(p => p.Position).Returns(TimeSpan.Zero);
+            player.Setup(p => p.Duration).Returns(TimeSpan.FromSeconds(80));
+            player.Setup(p => p.IsPlaying).Returns(true);
+            vm.IsPlaying = true;
+            vm.RefreshPlayback();
+            Assert.Equal("Song1", vm.NowPlayingTrack!.Title);
+            player.Verify(p => p.Load(tempFiles[2]), Times.Never);
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
+
     [AvaloniaFact]
     public void Next_SkipsRemovedTrackInCapturedQueue()
     {
