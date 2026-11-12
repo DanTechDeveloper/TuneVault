@@ -311,7 +311,9 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 
     private void OnTrackRemoved(Track track)
     {
-        if (!ReferenceEquals(EditingTrack, track))
+        // Match by Id, not reference: collection rebuilds can replace the
+        // instance while the logical track (and its Id) stays the same.
+        if (EditingTrack is null || EditingTrack.Id != track.Id)
         {
             return;
         }

@@ -11,6 +11,7 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - Tests: `cd TuneVault.Tests && dotnet test`
 - Single test: `cd TuneVault.Tests && dotnet test --filter "FullyQualifiedName~<TestName>"`
 - Linux playback needs `libasound2` and `libsndfile1`. Other native requirements: `docs/AUDIO.md`.
+- Implicit state machines and invariants: `docs/STATE_MACHINES.md`.
 
 ## Wiring
 
@@ -55,6 +56,8 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 - Next/Prev follows the queue captured when the current track was loaded (so switching views does not hijack playback); when nothing loaded, falls back to the current view's song list. Boundary presses show a toast instead of wrapping.
 - No wrap-around; Previous restarts the current track at the first track.
 - Auto-advances to the next track in the captured queue when a track ends; stops (with a "Last track" toast) at the end of the queue. No wrap-around.
+- Track end is detected only in `RefreshPlayback()`: `wasPlaying && !IsPlaying && Position >= Duration - 500 ms`. It calls `Next()`, so end-of-track and the Next button share queue/label/toast logic. A manual seek to the exact end counts as "finished" and advances.
+- Keep `SetPosition(0)` **before** `DurationSeconds = ...` in every load branch. `Slider.Maximum` binds to `DurationSeconds` and `Value` TwoWay to `PositionSeconds`; shrinking the maximum while the value sits at the old track's end makes the slider write that end position back as a seek — the new track then finishes instantly and auto-advance skips a song.
 - `_loadedQueue` is captured at play time; on a sort change in the **same** view it is rebuilt from `CurrentQueue` so Next/Prev follow the new sort. Captured queue is not touched when sorting a different view.
 - Boundary toasts are context-aware (coarse labels: All Songs / Album / Artist Songs / Album Artist Songs / Genre).
 
@@ -68,10 +71,11 @@ Avalonia desktop local-music player. Single project, .NET 9, MVVM with service i
 
 ## Testing
 
-- Test project: `TuneVault.Tests/` (xUnit + Avalonia.Headless.XUnit + Moq).
-- Run: `cd TuneVault.Tests && dotnet test`
+- Test project: `TuneVault.Tests/` (xUnit + Avalonia.Headless.XUnit + Moq). Tests are `[AvaloniaFact]` (headless, no display needed).
+- Run: `cd TuneVault.Tests && dotnet test` — no solution file, so `dotnet test` at the repo root does not work.
 - Single test: `cd TuneVault.Tests && dotnet test --filter "FullyQualifiedName~<TestName>"`
 - Main project excludes `TuneVault.Tests/` via `Compile Remove`.
+- Playback tests mock `IAudioPlayer` (`Position`/`Duration`/`IsPlaying`); call `Playback.RefreshPlayback()` directly to exercise finish/auto-advance. A stray `.cs` file anywhere in the project breaks `dotnet build` (the main project globs `**/*.cs`).
 
 ## Gotchas
 

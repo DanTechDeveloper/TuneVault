@@ -139,24 +139,9 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             }
 
             // No next track: clean up so the next click goes through the
-            // full load branch instead of the (now stale) "same track" toggle
-            try { _audioPlayer.Stop(); } catch { }
-            _library.ClearAllPlayingState();
-            if (_loadedTrack is not null)
-            {
-                _library.SetTrackPlayingState(_loadedTrack.Id, false);
-            }
-            _loadedTrack = null;
-            _loadedQueue = null;
-            _loadedQueueLabel = "All Songs";
-            _loadedQueueSource = "AllSongs";
-            IsPlaying = false;
-            // Reset slider to 0 so the state is "fresh", not stale at end.
-            _suppressSeek = true;
-            PositionSeconds = 0;
-            _suppressSeek = false;
-            StopCommand.NotifyCanExecuteChanged();
-            // keep NowPlayingTrack and DurationSeconds for display (completed state)
+            // full load branch instead of the (now stale) "same track" toggle.
+            // Keep NowPlayingTrack and DurationSeconds for the completed display.
+            ResetPlaybackState(unloadTrack: true, clearDisplay: false);
         }
     }
 
@@ -204,30 +189,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             if (!ReferenceEquals(_loadedTrack, track))
             {
-                _audioPlayer.Stop();
-                _library.ClearAllPlayingState();
-                if (_loadedTrack is not null)
+                if (!TryLoadTrack(track, captureQueue, autoPlay: true))
                 {
-                    _library.SetTrackPlayingState(_loadedTrack.Id, false);
+                    return;
                 }
-                var duration = _audioPlayer.Load(track.FilePath);
-
-                _loadedTrack = track;
-                if (captureQueue)
-                {
-                    _loadedQueue = CurrentQueue.ToList();
-                    _loadedQueueLabel = CurrentQueueLabel;
-                    _loadedQueueSource = CurrentQueueSource;
-                }
-                NowPlayingTrack = track;
-                StopCommand.NotifyCanExecuteChanged();
-                // Reset the slider before the duration changes: shrinking the
-                // slider Maximum while its Value sits at the old track's end
-                // makes the slider write that end position back as a seek, so
-                // the new track instantly "finishes" and skips a song.
-                SetPosition(0);
-                DurationSeconds = duration.TotalSeconds;
-                _audioPlayer.Play();
             }
             else
             {
@@ -255,6 +220,51 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Loads <paramref name="track"/> into the audio player, capturing the queue
+    /// when requested. Returns false (after clearing state) on failure.
+    /// </summary>
+    private bool TryLoadTrack(Track track, bool captureQueue, bool autoPlay)
+    {
+        try
+        {
+            _audioPlayer.Stop();
+            _library.ClearAllPlayingState();
+            if (_loadedTrack is not null)
+            {
+                _library.SetTrackPlayingState(_loadedTrack.Id, false);
+            }
+
+            var duration = _audioPlayer.Load(track.FilePath!);
+
+            _loadedTrack = track;
+            if (captureQueue)
+            {
+                _loadedQueue = CurrentQueue.ToList();
+                _loadedQueueLabel = CurrentQueueLabel;
+                _loadedQueueSource = CurrentQueueSource;
+            }
+            NowPlayingTrack = track;
+            StopCommand.NotifyCanExecuteChanged();
+            // Reset the slider before the duration changes: shrinking the
+            // slider Maximum while its Value sits at the old track's end
+            // makes the slider write that end position back as a seek, so
+            // the new track instantly "finishes" and skips a song.
+            SetPosition(0);
+            DurationSeconds = duration.TotalSeconds;
+            if (autoPlay)
+            {
+                _audioPlayer.Play();
+            }
+            return true;
+        }
+        catch
+        {
+            ClearPlaybackState();
+            return false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanPlayPause))]
     private void PlayPause()
     {
@@ -274,24 +284,10 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         {
             if (!ReferenceEquals(_loadedTrack, track))
             {
-                _audioPlayer.Stop();
-                _library.ClearAllPlayingState();
-                if (_loadedTrack is not null)
+                if (!TryLoadTrack(track, captureQueue: true, autoPlay: false))
                 {
-                    _library.SetTrackPlayingState(_loadedTrack.Id, false);
+                    return;
                 }
-                var duration = _audioPlayer.Load(track.FilePath);
-
-                _loadedTrack = track;
-                _loadedQueue = CurrentQueue.ToList();
-                _loadedQueueLabel = CurrentQueueLabel;
-                _loadedQueueSource = CurrentQueueSource;
-                NowPlayingTrack = track;
-                StopCommand.NotifyCanExecuteChanged();
-                // Same order as PlayTrackCore: reset the slider before the
-                // duration shrinks, or it seeks the new track to its end.
-                SetPosition(0);
-                DurationSeconds = duration.TotalSeconds;
             }
 
             if (_audioPlayer.IsPlaying)
@@ -321,11 +317,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _audioPlayer.Stop();
-        IsPlaying = false;
-        _library.ClearAllPlayingState();
-        if (_loadedTrack is not null) _library.SetTrackPlayingState(_loadedTrack.Id, false);
-        SetPosition(0);
+        ResetPlaybackState(unloadTrack: false, clearDisplay: false);
     }
 
     private bool CanStop() => _loadedTrack is not null;
@@ -598,13 +590,14 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             }
         }
 
-        if (!ReferenceEquals(_loadedTrack, track))
+        // Match by Id, not reference: collection rebuilds can replace the
+        // instance while the logical track (and its Id) stays the same.
+        if (_loadedTrack is null || _loadedTrack.Id != track.Id)
         {
             return;
         }
 
-        _audioPlayer.Stop();
-        ClearPlaybackState();
+        ResetPlaybackState(unloadTrack: true, clearDisplay: true);
     }
 
     private void UpdatePlaybackState()
@@ -624,24 +617,45 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         _suppressSeek = false;
     }
 
-    private void ClearPlaybackState()
+    private void ClearPlaybackState() =>
+        ResetPlaybackState(unloadTrack: true, clearDisplay: true);
+
+    /// <summary>
+    /// Single teardown path for "stop + clear playing state". <paramref name="unloadTrack"/>
+    /// drops the loaded track/queue (so the next play goes through the full load
+    /// branch); otherwise the loaded track is kept (Stop). <paramref name="clearDisplay"/>
+    /// clears NowPlaying/Duration (full reset); otherwise they are kept (completed
+    /// display after a track ends).
+    /// </summary>
+    private void ResetPlaybackState(bool unloadTrack, bool clearDisplay)
     {
         try { _audioPlayer.Stop(); } catch { }
 
+        _library.ClearAllPlayingState();
         if (_loadedTrack is not null)
         {
             _library.SetTrackPlayingState(_loadedTrack.Id, false);
         }
-        _library.ClearAllPlayingState();
 
-        _loadedTrack = null;
-        _loadedQueue = null;
-        _loadedQueueLabel = "All Songs";
-        _loadedQueueSource = "AllSongs";
-        NowPlayingTrack = null;
         IsPlaying = false;
-        DurationSeconds = 0;
+
+        if (unloadTrack)
+        {
+            _loadedTrack = null;
+            _loadedQueue = null;
+            _loadedQueueLabel = "All Songs";
+            _loadedQueueSource = "AllSongs";
+        }
+
+        if (clearDisplay)
+        {
+            NowPlayingTrack = null;
+            DurationSeconds = 0;
+        }
+
+        // Reset slider last; _suppressSeek prevents the slider from seeking.
         SetPosition(0);
+
         StopCommand.NotifyCanExecuteChanged();
     }
 

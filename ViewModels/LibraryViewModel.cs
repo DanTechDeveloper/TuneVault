@@ -1260,10 +1260,20 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         _searchDebounce?.Dispose();
         _searchDebounce = new Timer(_ =>
         {
-            _uiContext?.Post(async __ =>
+            if (_uiContext is not null)
             {
-                await ReloadSortedAsync();
-            }, null);
+                _uiContext.Post(async __ =>
+                {
+                    await ReloadSortedAsync();
+                }, null);
+            }
+            else
+            {
+                // No captured UI context (e.g. headless/test construction): run
+                // inline so search still refreshes the views.
+                try { ReloadSortedAsync().GetAwaiter().GetResult(); }
+                catch { /* best effort */ }
+            }
         }, null, 350, Timeout.Infinite);
     }
 

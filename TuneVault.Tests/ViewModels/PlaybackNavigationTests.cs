@@ -442,4 +442,35 @@ public class PlaybackNavigationTests
         }
         finally { Cleanup(dbPath, tempFiles); }
     }
+
+    [AvaloniaFact]
+    public void OnTrackRemoved_DifferentInstance_StopsPlayback()
+    {
+        var (library, dbPath, tempFiles) = CreateLibraryWithTracks(3);
+        try
+        {
+            var player = MakePlayer();
+            player.Setup(p => p.IsPlaying).Returns(true);
+            var vm = new PlaybackViewModel(player.Object, library);
+            vm.PlayTrackCommand.Execute(library.Tracks[1]);
+            vm.IsPlaying = true;
+
+            // A different instance with the same Id (as a collection rebuild
+            // could produce) must still stop playback.
+            var ghost = new Track
+            {
+                Id = library.Tracks[1].Id,
+                FilePath = library.Tracks[1].FilePath,
+                Title = library.Tracks[1].Title,
+                Artist = library.Tracks[1].Artist,
+                Duration = TimeSpan.FromSeconds(100),
+            };
+            library.Remove(ghost);
+
+            Assert.Null(vm.NowPlayingTrack);
+            Assert.False(vm.IsPlaying);
+            Assert.False(vm.StopCommand.CanExecute(null));
+        }
+        finally { Cleanup(dbPath, tempFiles); }
+    }
 }

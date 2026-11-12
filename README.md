@@ -20,12 +20,13 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.
 - **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
 - **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, Album Artists, Artists, and Genres views, with a "NOW PLAYING" indicator and metadata (including year/unknown genre).
+- **Auto-Advance**: When a track finishes, playback moves to the next track in the queue it was started from (respecting that view's active sort). Stops at the end of the queue with a "Last track" toast — no wrap-around.
 - **Context-Aware Boundary Toasts**: Next/Prev at list boundaries report which view hit the boundary (All Songs / Album / Artist Songs / Album Artist Songs / Genre).
 - **Album-Count Tiles**: The Album Artists list shows per-artist album counts ("1 Album" / "N Albums") instead of track counts.
 - **Unknown Year Display**: Tracks with a missing year show "Unknown Year" in the track row and leave the edit field blank.
 - **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields.
 - **Clear Search & No-Results States**: When a search returns no results, views show a clarifying message and a "Clear Field" button that resets the search and restores all rows.
-- **Accurate Playback Indicators**: Track rows clear "NOW PLAYING" and revert to the play icon when a track ends or playback moves; selecting a new track marks only that row as playing.
+- **Accurate Playback Indicators**: Track rows clear "NOW PLAYING" and revert to the play icon when playback moves to another track or stops at the end of the queue; selecting a new track marks only that row as playing.
 - **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for navigation, playback, and UI controls.
 - **Fluent Design System**: Dark-themed UI built on Avalonia's fluent resources, with high-contrast dialog overlays.
 - **Cross-Platform Audio Architecture**: Native ALSA playback on Linux (`AlsaOut`) and WASAPI on Windows (`WasapiPlayer`).
@@ -36,6 +37,7 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Linux Native Dependencies**:
   - `libasound2`
   - `libsndfile1`
+  - Details and per-OS notes: `docs/AUDIO.md`.
 
 ## Getting Started
 
@@ -81,11 +83,13 @@ cd TuneVault.Tests && dotnet test
 - `Program.cs` / `App.axaml.cs`: Application entry point and composition root.
 - `ViewModels/MainWindowViewModel.cs`: Thin window shell; owns tab navigation and exposes the feature ViewModels.
 - `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations, search, album/artist grouping, and in-memory filtering.
-- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, volume, and Next/Previous navigation.
+- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, volume, auto-advance, and Next/Previous navigation.
 - `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal and metadata saving.
+- `ViewModels/NavigationTab.cs`: Tab identifiers used by the shell and library views.
 - `Models/Track.cs`: Observable domain model for tracks (incl. AlbumArtist, EffectiveAlbumArtist).
 - `Models/AlbumSummary.cs`: Read-model for album tiles (name, track count, cover art).
 - `Models/ArtistSummary.cs`: Read-model for artist tiles (name, track count, cover art).
+- `Models/GenreSummary.cs`: Read-model for genre tiles (name, track count, cover art, total duration).
 - `Services/`:
   - `IAudioPlayer` / `NaudioAudioPlayer`: Audio engine abstraction.
   - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser (incl. AlbumArtist).
