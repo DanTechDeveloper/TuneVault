@@ -25,6 +25,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private readonly SynchronizationContext? _uiContext;
     private Timer? _searchDebounce;
     private bool _isRefreshingSummaries;
+    private bool _isResettingSort;
+    private bool _searchClearNotified;
 
     private readonly List<Track> _allTracks = new();
 
@@ -292,10 +294,13 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(SortContext));
             OnPropertyChanged(nameof(SortFields));
             var options = SortFields;
-            if (options.Count > 0 && !options.Contains(SortField))
-            {
-                SortField = options[0];
-            }
+            if (options.Count == 0) return;
+            // A new context (tab switch or drill-down) always starts from that
+            // context's default sort field and ascending order.
+            _isResettingSort = true;
+            SortField = options[0];
+            IsSortDescending = false;
+            _isResettingSort = false;
         }
     }
 
@@ -431,6 +436,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>Raised after a track has been removed from the collection.</summary>
     public event Action<Track>? TrackRemoved;
 
+    /// <summary>Raised once after a search clear rebuilds the collections unfiltered.</summary>
+    public event Action? SearchCleared;
+
     private bool CanImport => !IsLoading;
 
     [RelayCommand(CanExecute = nameof(CanImport))]
@@ -562,7 +570,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// Re-queries the database in the selected order. Existing Track instances are
     /// reused by Id so PlaybackViewModel's loaded-track reference stays valid.
     /// </summary>
-    public Task ReloadSortedAsync()
+    public Task ReloadSortedAsync(bool fromSearch = false)
     {
         if (!_libraryLoaded || IsLoading)
         {
@@ -589,7 +597,31 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         SelectedTrack = selectedId is null ? null : Tracks.FirstOrDefault(t => t.Id == selectedId);
+
+        if (fromSearch && !IsSearchActive && !_searchClearNotified)
+        {
+            _searchClearNotified = true;
+            SearchCleared?.Invoke();
+        }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Resets the shared sort field and direction to the default for the current
+    /// <see cref="SortContext"/> (first entry in <see cref="SortFields"/>, ascending).
+    /// Used when switching tabs so a sort picked in one view does not leak into
+    /// another. Reloads the views once instead of once per property change.
+    /// </summary>
+    public void ResetSortToDefault()
+    {
+        var defaultField = SortFields.Count > 0 ? SortFields[0] : TrackSortField.Title;
+
+        _isResettingSort = true;
+        SortField = defaultField;
+        IsSortDescending = false;
+        _isResettingSort = false;
+
+        _ = ReloadSortedAsync();
     }
 
     /// <summary>
@@ -782,7 +814,14 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         SortContext = newContext;
     }
 
-    partial void OnCurrentTabChanged(NavigationTab value) => UpdateSortContext();
+    partial void OnCurrentTabChanged(NavigationTab value)
+    {
+        UpdateSortContext();
+        // Reset to the new tab's default sort/order. Finalized again by the
+        // shell after drill-down state is cleared; this covers direct tab
+        // switches too.
+        ResetSortToDefault();
+    }
 
     private IOrderedEnumerable<Track> SortTracks(IEnumerable<Track> source)
     {
@@ -1243,35 +1282,50 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     partial void OnSortFieldChanged(TrackSortField value)
     {
+        if (_isResettingSort) return;
         _ = ReloadSortedAsync();
     }
 
     partial void OnIsSortDescendingChanged(bool value)
     {
         OnPropertyChanged(nameof(SortDirectionLabel));
+        if (_isResettingSort) return;
         _ = ReloadSortedAsync();
     }
 
     partial void OnSearchTextChanged(string value)
     {
         IsSearchActive = !string.IsNullOrWhiteSpace(value);
+        if (IsSearchActive)
+        {
+            _searchClearNotified = false;
+        }
 
-        // Debounce: wait ~350ms of typing silence before hitting the database.
+        // Debounce: wait ~350ms of typing silence before re-filtering. Clearing
+        // is cheap, so do it inline: one refresh and one notification per clear,
+        // whether the user clicks Clear Field or backspaces the text.
         _searchDebounce?.Dispose();
+        _searchDebounce = null;
+        if (!IsSearchActive)
+        {
+            _ = ReloadSortedAsync(fromSearch: true);
+            return;
+        }
+
         _searchDebounce = new Timer(_ =>
         {
             if (_uiContext is not null)
             {
                 _uiContext.Post(async __ =>
                 {
-                    await ReloadSortedAsync();
+                    await ReloadSortedAsync(fromSearch: true);
                 }, null);
             }
             else
             {
                 // No captured UI context (e.g. headless/test construction): run
                 // inline so search still refreshes the views.
-                try { ReloadSortedAsync().GetAwaiter().GetResult(); }
+                try { ReloadSortedAsync(fromSearch: true).GetAwaiter().GetResult(); }
                 catch { /* best effort */ }
             }
         }, null, 350, Timeout.Infinite);
@@ -1281,17 +1335,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
 
     [RelayCommand]
-    private void ClearSearch()
-    {
-        SearchText = "";
-        _ = ReloadSortedAsync();
-    }
-
-    [RelayCommand]
-    private void ClearSearchText() => ClearSearch();
-
-    [RelayCommand]
-    private void ClearField() => ClearSearch();
+    private void ClearSearch() => SearchText = "";
 
     [RelayCommand]
     private void SelectAlbum(AlbumSummary album)

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:models="using:TuneVault.Models"
+             xmlns:services="using:TuneVault.Services"
              xmlns:views="using:TuneVault.Views"
              xmlns:converters="using:TuneVault.Converters"
              x:Class="TuneVault.App"
@@ -75,6 +76,9 @@
 
         <DataTemplate x:Key="TrackRowTemplate" x:DataType="models:Track">
             <views:TrackRow />
+        </DataTemplate>
+        <DataTemplate x:Key="AudiometaTrackRowTemplate" x:DataType="services:AudiometaTrack">
+            <views:AudiometaTrackRow />
         </DataTemplate>
         <DataTemplate x:Key="AlbumRowTemplate" x:DataType="models:AlbumSummary">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="4,6">

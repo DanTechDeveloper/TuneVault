@@ -1,5 +1,8 @@
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,14 +19,26 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 {
     private readonly IFilePickerService _filePicker;
     private readonly LibraryViewModel _library;
+    private readonly IAudiometaService _audiometa;
     private bool _editCoverArtChanged;
+    private bool _isApplyingMetadata;
+    private CancellationTokenSource? _fetchCts;
 
     public MetadataEditorViewModel(
         IFilePickerService filePicker,
         LibraryViewModel library)
+        : this(filePicker, library, new LastFmService())
+    {
+    }
+
+    public MetadataEditorViewModel(
+        IFilePickerService filePicker,
+        LibraryViewModel library,
+        IAudiometaService audiometa)
     {
         _filePicker = filePicker;
         _library = library;
+        _audiometa = audiometa ?? new LastFmService();
 
         _library.TrackRemoved += OnTrackRemoved;
     }
@@ -35,6 +50,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
     private Track? _editingTrack;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SearchFoundLabel))]
     private string _editTitle = "";
 
     [ObservableProperty]
@@ -68,6 +84,30 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
 
     public bool HasEditCoverArt => EditCoverArtBitmap is not null;
 
+    [ObservableProperty]
+    private bool _isMetadataLoading;
+
+    [ObservableProperty]
+    private string _metadataError = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMetadataResults))]
+    [NotifyPropertyChangedFor(nameof(SearchFoundLabel))]
+    private ObservableCollection<AudiometaTrack> _metadataResults = new();
+
+    [ObservableProperty]
+    private AudiometaTrack? _selectedMetadataResult;
+
+    [ObservableProperty]
+    private AudiometaTrack? _selectedPictureResult;
+
+    public bool HasMetadataResults => MetadataResults.Count > 0;
+
+    public string SearchFoundLabel =>
+        HasMetadataResults
+            ? $"Search found {MetadataResults.Count} result(s) for \"{EditTitle}\""
+            : string.Empty;
+
     [RelayCommand]
     private void EditTrack(Track? track)
     {
@@ -81,6 +121,9 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         EditingTrack = track;
         EditTitle = track.Title;
         EditArtist = track.Artist;
+
+        // Reset online lookup state for the newly opened track.
+        ResetMetadataLookup();
         EditAlbum = track.Album ?? "";
         EditGenre = track.Genre ?? "";
         EditYear = track.Year > 0 ? track.Year.ToString() : "";
@@ -120,6 +163,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         EditCoverArtBitmap = null;
         EditYearError = "";
         _editCoverArtChanged = false;
+        ResetMetadataLookup();
     }
 
     [RelayCommand]
@@ -143,6 +187,220 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         catch
         {
         }
+    }
+
+    private void ResetMetadataLookup()
+    {
+        try { _fetchCts?.Cancel(); } catch { }
+        _fetchCts?.Dispose();
+        _fetchCts = null;
+
+        MetadataResults = new ObservableCollection<AudiometaTrack>();
+        SelectedMetadataResult = null;
+        SelectedPictureResult = null;
+        MetadataError = "";
+        IsMetadataLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task FetchMetadataAsync()
+    {
+        ResetMetadataLookup();
+
+        if (string.IsNullOrWhiteSpace(EditTitle))
+        {
+            MetadataError = "Enter a title first, then fetch.";
+            return;
+        }
+
+        _fetchCts = new CancellationTokenSource();
+        var token = _fetchCts.Token;
+
+        IsMetadataLoading = true;
+        try
+        {
+            var tracks = await _audiometa.SearchTracksAsync(EditTitle, token);
+            if (token.IsCancellationRequested || !IsEditMetadataModalOpen) return;
+
+            MetadataResults = new ObservableCollection<AudiometaTrack>(tracks);
+
+            if (MetadataResults.Count == 0)
+            {
+                var reason = _audiometa.LastFailureReason;
+                MetadataError = reason switch
+                {
+                    "no_key" => "No API key configured — edit manually.",
+                    "invalid_key" => "Invalid API key — edit manually.",
+                    "rate_limited" => "Rate limited — try again shortly.",
+                    "service_offline" => "No internet connection — edit manually.",
+                    "network" => "No internet connection — edit manually.",
+                    _ => "No matches — edit manually.",
+                };
+            }
+            else
+            {
+                MetadataError = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            if (token.IsCancellationRequested) return;
+            System.Diagnostics.Debug.WriteLine($"FetchMetadataAsync failed: {ex.Message}");
+            MetadataError = "No internet connection — edit manually.";
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested) IsMetadataLoading = false;
+        }
+    }
+
+    partial void OnSelectedMetadataResultChanged(AudiometaTrack? value)
+    {
+        if (_isApplyingMetadata) return;
+        if (value is not null)
+        {
+            _ = ApplyMetadata(value);
+        }
+    }
+
+    partial void OnSelectedPictureResultChanged(AudiometaTrack? value)
+    {
+        if (value is null || _isApplyingMetadata || !IsEditMetadataModalOpen) return;
+        _ = ApplyCoverArtOnlyAsync(value);
+    }
+
+    /// <summary>Picture-strip selection changes only the cover; text fields stay as loaded.</summary>
+    private async Task ApplyCoverArtOnlyAsync(AudiometaTrack track)
+    {
+        var token = _fetchCts?.Token ?? CancellationToken.None;
+        if (string.IsNullOrWhiteSpace(track.ImageUrl) || token.IsCancellationRequested) return;
+
+        try
+        {
+            var bytes = await _audiometa.DownloadImageAsync(track.ImageUrl, token);
+            if (bytes is { Length: > 0 } && !token.IsCancellationRequested && IsEditMetadataModalOpen)
+            {
+                EditPictureData = bytes;
+                _editCoverArtChanged = true;
+                try
+                {
+                    using var ms = new MemoryStream(bytes);
+                    EditCoverArtBitmap = new Avalonia.Media.Imaging.Bitmap(ms);
+                }
+                catch
+                {
+                    EditCoverArtBitmap = null;
+                }
+
+                _library.CloseToastCommand.Execute(null);
+                _library.ToastTitle = EditingTrack?.Title ?? track.Name;
+                _library.ToastSubtitle = EditingTrack?.ArtistAlbum ?? string.Empty;
+                _library.ToastDetail = string.Empty;
+                _library.ToastMessage = "Cover changed!";
+                _library.ToastCover = EditCoverArtBitmap;
+                _library.ShowToast = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyCoverArtOnlyAsync image download failed: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApplyTrackMetadataAsync(AudiometaTrack? track)
+    {
+        if (track is null) return;
+        if (_isApplyingMetadata) return;
+        if (!IsEditMetadataModalOpen) return;
+
+        _isApplyingMetadata = true;
+        try
+        {
+            if (!ReferenceEquals(SelectedMetadataResult, track))
+            {
+                SelectedMetadataResult = track;
+            }
+
+            await ApplyMetadata(track);
+        }
+        finally
+        {
+            _isApplyingMetadata = false;
+        }
+    }
+
+    private async Task ApplyMetadata(AudiometaTrack track)
+    {
+        var token = _fetchCts?.Token ?? CancellationToken.None;
+
+        EditTitle = string.IsNullOrWhiteSpace(track.Name) ? EditTitle : track.Name;
+        if (!string.IsNullOrWhiteSpace(track.Artist)) EditArtist = track.Artist;
+        if (!string.IsNullOrWhiteSpace(track.Album)) EditAlbum = track.Album!;
+        if (track.Year is > 0) EditYear = track.Year.Value.ToString();
+
+        // Fetch genre from artist search (best effort).
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(track.Artist) && !token.IsCancellationRequested && IsEditMetadataModalOpen)
+            {
+                var artists = await _audiometa.SearchArtistsAsync(track.Artist, token);
+                if (!token.IsCancellationRequested && IsEditMetadataModalOpen)
+                {
+                    var match = artists.FirstOrDefault();
+                    if (match is not null && match.Genres.Count > 0)
+                    {
+                        EditGenre = match.Genres[0];
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyTrackMetadataAsync genre fetch failed: {ex.Message}");
+        }
+
+        // Download cover art (best effort).
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(track.ImageUrl) && !token.IsCancellationRequested && IsEditMetadataModalOpen)
+            {
+                var bytes = await _audiometa.DownloadImageAsync(track.ImageUrl, token);
+                if (bytes is { Length: > 0 } && !token.IsCancellationRequested && IsEditMetadataModalOpen)
+                {
+                    EditPictureData = bytes;
+                    _editCoverArtChanged = true;
+                    using var ms = new MemoryStream(bytes);
+                    EditCoverArtBitmap = new Avalonia.Media.Imaging.Bitmap(ms);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ApplyTrackMetadataAsync image download failed: {ex.Message}");
+        }
+
+        if (!IsEditMetadataModalOpen) return;
+
+        // Success toast (mirrors SaveTrackMetadataAsync) so the apply is confirmed.
+        _library.ToastTitle = string.IsNullOrWhiteSpace(EditTitle) ? track.Name : EditTitle;
+        _library.ToastSubtitle = track.ArtistAlbum;
+        _library.ToastDetail = track.GenreDisplay;
+        _library.ToastMessage = "Applied!";
+        Avalonia.Media.Imaging.Bitmap? cover = null;
+        if (EditPictureData is { Length: > 0 })
+        {
+            try
+            {
+                using var ms = new MemoryStream(EditPictureData);
+                cover = new Avalonia.Media.Imaging.Bitmap(ms);
+            }
+            catch
+            {
+            }
+        }
+        _library.ToastCover = cover;
+        _library.ShowToast = true;
     }
 
     [RelayCommand]
@@ -289,6 +547,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
         _library.ToastCover = cover;
         _library.ShowToast = true;
 
+        ResetMetadataLookup();
         IsEditMetadataModalOpen = false;
         EditingTrack = null;
         EditPictureData = null;
@@ -318,6 +577,7 @@ public sealed partial class MetadataEditorViewModel : ObservableObject
             return;
         }
 
+        ResetMetadataLookup();
         IsEditMetadataModalOpen = false;
         EditingTrack = null;
         EditPictureData = null;

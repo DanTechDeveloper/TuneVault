@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:services="using:TuneVault.Services"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             mc:Ignorable="d"
+             d:DesignWidth="500"
+             d:DesignHeight="60"
+             x:Class="TuneVault.Views.AudiometaTrackRow"
+             x:DataType="services:AudiometaTrack">
+
+    <Grid ColumnDefinitions="*,Auto,Auto"
+          ColumnSpacing="10"
+          Margin="4,6">
+        <StackPanel Grid.Column="0"
+                    Spacing="3"
+                    VerticalAlignment="Center">
+            <TextBlock Text="{Binding Name}"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"/>
+
+            <TextBlock Text="{Binding ArtistAlbum}"
+                       FontSize="{StaticResource FontSizeSmMd}"
+                       Opacity="0.65"
+                       TextTrimming="CharacterEllipsis"/>
+
+            <TextBlock Text="{Binding GenreDisplay}"
+                       FontSize="{StaticResource FontSizeSm}"
+                       Opacity="0.5"
+                       TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+
+        <TextBlock Grid.Column="1"
+                   Text="{Binding DurationDisplay}"
+                   VerticalAlignment="Center"
+                   FontSize="{StaticResource FontSizeSmMd}"
+                   Opacity="0.65"/>
+
+        <Button Grid.Column="2"
+                Content="Use"
+                Width="48"
+                Height="28"
+                Padding="0"
+                CornerRadius="6"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                FontSize="{StaticResource FontSizeSm}"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Editor.ApplyTrackMetadataCommand}"
+                CommandParameter="{Binding .}"
+                ToolTip.Tip="Apply this metadata"/>
+    </Grid>
+</UserControl>

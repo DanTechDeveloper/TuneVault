@@ -26,6 +26,9 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
     private List<Track>? _loadedQueue;
     private string _loadedQueueLabel = "All Songs";
     private string _loadedQueueSource = "AllSongs";
+    // CurrentTab only changes on an explicit tab switch (unlike the queue source,
+    // which search-clear reselects can change even without user navigation).
+    private NavigationTab _loadedQueueTab = NavigationTab.AllSongs;
     private bool _suppressSeek;
     private bool _disposed;
 
@@ -39,6 +42,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
 
         _library.PropertyChanged += OnLibraryPropertyChanged;
         _library.TrackRemoved += OnTrackRemoved;
+        _library.SearchCleared += OnSearchCleared;
     }
 
     [ObservableProperty]
@@ -155,6 +159,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         _disposed = true;
         _library.PropertyChanged -= OnLibraryPropertyChanged;
         _library.TrackRemoved -= OnTrackRemoved;
+        _library.SearchCleared -= OnSearchCleared;
 
         if (NowPlayingTrack is not null)
         {
@@ -243,6 +248,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
                 _loadedQueue = CurrentQueue.ToList();
                 _loadedQueueLabel = CurrentQueueLabel;
                 _loadedQueueSource = CurrentQueueSource;
+                _loadedQueueTab = _library.CurrentTab;
             }
             NowPlayingTrack = track;
             StopCommand.NotifyCanExecuteChanged();
@@ -577,6 +583,25 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Replaces the queue captured from the filtered search results with the
+    /// restored, unfiltered collection of the same view. Pure no-op (no player,
+    /// track, or queue change) when the view switched or the track is absent.
+    /// </summary>
+    private void OnSearchCleared()
+    {
+        if (_loadedTrack is null) return;
+        if (_library.CurrentTab != _loadedQueueTab) return;
+
+        var restored = CurrentQueue.ToList();
+        // The track is outside this view now. Keep the current queue and player
+        // untouched: never interrupt playback or silently replace the track.
+        if (!restored.Any(t => t.Id == _loadedTrack.Id)) return;
+
+        _loadedQueue = restored;
+        _loadedQueueLabel = CurrentQueueLabel;
+    }
+
     private void OnTrackRemoved(Track track)
     {
         if (_loadedQueue is not null)
@@ -645,6 +670,7 @@ public sealed partial class PlaybackViewModel : ObservableObject, IDisposable
             _loadedQueue = null;
             _loadedQueueLabel = "All Songs";
             _loadedQueueSource = "AllSongs";
+            _loadedQueueTab = _library.CurrentTab;
         }
 
         if (clearDisplay)

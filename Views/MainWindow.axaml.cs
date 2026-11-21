@@ -24,7 +24,7 @@ public partial class MainWindow : Window
 
         _toastTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(4),
+            Interval = TimeSpan.FromSeconds(6),
         };
         _toastTimer.Tick += OnToastTimerTick;
     }

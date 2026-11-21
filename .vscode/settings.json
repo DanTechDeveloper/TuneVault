@@ -1,4 +1,12 @@
 {
   "explorer.fileNesting.enabled": true,
-  "explorer.fileNesting.expand": false
+  "explorer.fileNesting.expand": false,
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true
+  },
+  "files.watcherExclude": {
+    "**/bin/**": true,
+    "**/obj/**": true
+  }
 }

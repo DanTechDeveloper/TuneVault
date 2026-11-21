@@ -4,3 +4,5 @@ obj/
 *.pdb
 *.cache
 *.sourcelink.json
+appsettings.local.json
+appsettings.*.local.json

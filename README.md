@@ -15,16 +15,18 @@ A modern, fast, and lightweight local music player desktop application built wit
 - **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
 - **Missing File Flagging**: Tracks whose file disappeared (or whose drive is offline) are flagged in the list instead of being deleted from the library.
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files. Validates Year (empty → unknown; invalid input shows an inline error and blocks save) and shows a TrackRow-style toast on success.
+- **Online Metadata Lookup (optional)**: Fetch title, artist, album, year, genre, and cover art from Last.fm inside the editor. Review results in a reusable row, apply them to the edit fields or apply only a cover image. Missing key, rate limits, or no connection fall back to an inline message; manual editing always works.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
 - **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
 - **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.
 - **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
+- **Search-Aware Playback Context**: Playing a track from search results uses the filtered results as its navigation queue. Clearing the search restores the unfiltered collection of the active view as that queue and re-locates the current track by id — Previous/Next then follow the restored collection without restarting or replacing the playing track.
 - **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, Album Artists, Artists, and Genres views, with a "NOW PLAYING" indicator and metadata (including year/unknown genre).
 - **Auto-Advance**: When a track finishes, playback moves to the next track in the queue it was started from (respecting that view's active sort). Stops at the end of the queue with a "Last track" toast — no wrap-around.
 - **Context-Aware Boundary Toasts**: Next/Prev at list boundaries report which view hit the boundary (All Songs / Album / Artist Songs / Album Artist Songs / Genre).
 - **Album-Count Tiles**: The Album Artists list shows per-artist album counts ("1 Album" / "N Albums") instead of track counts.
 - **Unknown Year Display**: Tracks with a missing year show "Unknown Year" in the track row and leave the edit field blank.
-- **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields.
+- **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields. Switching tabs or drill-down levels resets to that view's default sort field and ascending order.
 - **Clear Search & No-Results States**: When a search returns no results, views show a clarifying message and a "Clear Field" button that resets the search and restores all rows.
 - **Accurate Playback Indicators**: Track rows clear "NOW PLAYING" and revert to the play icon when playback moves to another track or stops at the end of the queue; selecting a new track marks only that row as playing.
 - **Material Icons**: Google Material Icons (via `Material.Icons.Avalonia`) for navigation, playback, and UI controls.
@@ -33,7 +35,7 @@ A modern, fast, and lightweight local music player desktop application built wit
 
 ## Requirements
 
-- **.NET 9 SDK** (e.g. .NET SDK 9.0.320+)
+- **.NET 9 SDK**, pinned to **9.0.320** by `global.json`
 - **Linux Native Dependencies**:
   - `libasound2`
   - `libsndfile1`
@@ -61,12 +63,29 @@ dotnet run --project TuneVault.csproj
 cd TuneVault.Tests && dotnet test
 ```
 
+One test: `cd TuneVault.Tests && dotnet test --filter "FullyQualifiedName~<TestName>"`
+
+### Optional: Last.fm metadata lookup
+
+Set the `AUDIOMETA_API_KEY` (or `LASTFM_API_KEY`) environment variable, or create a gitignored `appsettings.local.json` in the project root:
+
+```json
+{
+  "LastFm": {
+    "ApiKey": "YOUR_LASTFM_API_KEY"
+  }
+}
+```
+
+Without a key or an internet connection, the metadata editor keeps working in manual mode and shows an inline lookup message.
+
 ## Tech Stack
 
 - **Framework**: Avalonia UI 11.3.12 (.NET 9)
 - **MVVM**: CommunityToolkit.Mvvm 8.4.2
 - **Audio Output & Decoding**: NAudio 3.3.0 (`NAudio.Core`, `NAudio.Alsa`, `NAudio.SoundFile`, `NAudio.Wasapi`)
 - **Metadata & ID3 Tags**: TagLibSharp 2.3.0
+- **Online Metadata**: Last.fm Web API via `HttpClient` (`LastFmService` behind `IAudiometaService`)
 - **Persistence**: SQLite via `Microsoft.Data.Sqlite` 9.0.22
 - **Icons**: Material.Icons.Avalonia 2.4.1
 - **Testing**: xUnit + Avalonia.Headless.XUnit + Moq
@@ -80,11 +99,11 @@ cd TuneVault.Tests && dotnet test
 
 ## Architecture & Code Structure
 
-- `Program.cs` / `App.axaml.cs`: Application entry point and composition root.
+- `Program.cs` / `App.axaml.cs`: Application entry point and composition root; `App.axaml.cs` also resolves the optional Last.fm API key and constructs `LastFmService`.
 - `ViewModels/MainWindowViewModel.cs`: Thin window shell; owns tab navigation and exposes the feature ViewModels.
-- `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations, search, album/artist grouping, and in-memory filtering.
-- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, volume, auto-advance, and Next/Previous navigation.
-- `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal and metadata saving.
+- `ViewModels/LibraryViewModel.cs`: Track collection, selection, imports, duplicate/delete confirmations, search, album/artist grouping, in-memory filtering, and sort state; raises `SearchCleared` after a search clear rebuild.
+- `ViewModels/PlaybackViewModel.cs`: Audio transport, now playing state, progress, volume, auto-advance, captured navigation queue, and Next/Previous navigation.
+- `ViewModels/MetadataEditorViewModel.cs`: Tag/cover-art editor modal, metadata saving, and Last.fm lookup/apply commands.
 - `ViewModels/NavigationTab.cs`: Tab identifiers used by the shell and library views.
 - `Models/Track.cs`: Observable domain model for tracks (incl. AlbumArtist, EffectiveAlbumArtist).
 - `Models/AlbumSummary.cs`: Read-model for album tiles (name, track count, cover art).
@@ -93,13 +112,14 @@ cd TuneVault.Tests && dotnet test
 - `Services/`:
   - `IAudioPlayer` / `NaudioAudioPlayer`: Audio engine abstraction.
   - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser (incl. AlbumArtist).
+  - `IAudiometaService` / `LastFmService`: Optional online track/artist lookup and cover downloads; all failures degrade to empty results.
   - `IFilePickerService` / `AvaloniaFilePickerService`: Audio and image file selection.
   - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, schema v2 (incl. album_artist), and migrations.
   - `LibraryKeys`: Path/identity normalization shared by imports and the database.
 - `Views/`:
-  - `MainWindow.axaml`: Main window layout with header, search bar, navigation sidebar, dynamic content, now playing sidebar, and modal overlays.
+  - `MainWindow.axaml`: Main window layout with header, search bar, navigation sidebar, dynamic content, now playing sidebar, toast overlay, and modal overlays.
   - `AllSongsView.axaml`, `AlbumsView.axaml`, `AlbumArtistsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.
   - `TrackRow.axaml`: Reusable track row control shared across views (cover, title, artist/album, play, duration, edit, NOW PLAYING indicator).
-- `App.axaml`: Application styles and shared resources (including `TrackRowTemplate` and `AlbumRowTemplate`).
-- `TuneVault.Tests/`: xUnit test project (Models, Services, ViewModels, Views smoke tests).
-```
+  - `AudiometaTrackRow.axaml`: Reusable row for Last.fm search results, with an "Use" button to apply metadata.
+- `App.axaml`: Application styles and shared resources (including `TrackRowTemplate`, `AudiometaTrackRowTemplate`, and `AlbumRowTemplate`).
+- `TuneVault.Tests/`: xUnit test project (Models, Services, ViewModels, Views smoke tests); online lookup is tested with a mocked `IAudiometaService`, so the suite needs no network.

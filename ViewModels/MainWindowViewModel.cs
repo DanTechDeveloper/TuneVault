@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -20,12 +19,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsAlbumArtists => CurrentTab == NavigationTab.AlbumArtists;
     public bool IsGenresTab => CurrentTab == NavigationTab.Genres;
 
-    /// <summary>True when the active view has a sortable track list.</summary>
-    public bool CanSort => true;
-
-    /// <summary>CanSort combined with not-loading, for binding to IsEnabled.</summary>
-    public bool CanSortTracks => CanSort && !Library.IsLoading;
-
     public MainWindowViewModel(
         LibraryViewModel library,
         PlaybackViewModel playback,
@@ -34,20 +27,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         Library = library;
         Playback = playback;
         Editor = editor;
-
-        Library.PropertyChanged += OnLibraryPropertyChangedForSort;
-    }
-
-    private void OnLibraryPropertyChangedForSort(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(LibraryViewModel.IsLoading) ||
-            e.PropertyName == nameof(LibraryViewModel.IsAlbumDetailView) ||
-            e.PropertyName == nameof(LibraryViewModel.IsArtistSongsView) ||
-            e.PropertyName == nameof(LibraryViewModel.IsGenreSongsView))
-        {
-            OnPropertyChanged(nameof(CanSort));
-            OnPropertyChanged(nameof(CanSortTracks));
-        }
     }
 
     public LibraryViewModel Library { get; }
@@ -63,8 +42,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsArtistsTab));
         OnPropertyChanged(nameof(IsAlbumArtists));
         OnPropertyChanged(nameof(IsGenresTab));
-        OnPropertyChanged(nameof(CanSort));
-        OnPropertyChanged(nameof(CanSortTracks));
 
         // Reset drill-down state so switching tabs always lands on Layer 1
         // (album/artist list) instead of retaining the last selected detail.
@@ -81,6 +58,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         // (in which case OnSelectedArtistChanged won't fire).
         Library.SelectedArtistAlbum = null;
         Library.IsArtistAllSongsView = false;
+        // Tab switch lands on Layer 1 of the new tab: restore that tab's default
+        // sort field and ascending order instead of inheriting the previous tab's.
+        Library.ResetSortToDefault();
         Library.RefreshArtistsView();
         Library.IsTabSwitching = false;
     }
