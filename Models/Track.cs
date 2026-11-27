@@ -69,6 +69,16 @@ public sealed partial class Track : ObservableObject
 
     public string PlayPauseToolTip => IsPlaying ? "Pause track" : "Play track";
 
+    /// <summary>Persisted favorite flag. Toggled from any track row or the now-playing bar.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteIconKind))]
+    [NotifyPropertyChangedFor(nameof(FavoriteToolTip))]
+    private bool _isFavorite;
+
+    public MaterialIconKind FavoriteIconKind => IsFavorite ? MaterialIconKind.Heart : MaterialIconKind.HeartOutline;
+
+    public string FavoriteToolTip => IsFavorite ? "Remove from favorites" : "Add to favorites";
+
     /// <summary>Combined artist/album label for the track row.</summary>
     public string ArtistAlbum => string.IsNullOrWhiteSpace(Album)
         ? Artist

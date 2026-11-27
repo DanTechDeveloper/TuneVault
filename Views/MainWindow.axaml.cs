@@ -49,6 +49,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _viewModel?.Playback.SaveSessionState();
         _progressTimer.Stop();
         _progressTimer.Tick -= OnProgressTimerTick;
         _toastTimer.Stop();
@@ -89,6 +90,7 @@ public partial class MainWindow : Window
         try
         {
             await viewModel.Library.LoadLibraryAsync();
+            await viewModel.Playback.RestoreSessionAsync();
         }
         catch
         {

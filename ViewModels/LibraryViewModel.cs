@@ -48,6 +48,14 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(ShowNoResults));
         };
 
+        FavoriteTracks = new ObservableCollection<Track>();
+        FavoriteTracks.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasFavoriteTracks));
+            OnPropertyChanged(nameof(ShowFavoritesEmpty));
+            OnPropertyChanged(nameof(ShowFavoritesNoResults));
+        };
+
         Albums = new ObservableCollection<AlbumSummary>();
         Albums.CollectionChanged += (_, _) =>
         {
@@ -108,6 +116,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public ObservableCollection<Track> Tracks { get; }
 
     public bool HasTracks => Tracks.Count > 0;
+
+    public ObservableCollection<Track> FavoriteTracks { get; }
+
+    public bool HasFavoriteTracks => FavoriteTracks.Count > 0;
 
     public ObservableCollection<AlbumSummary> Albums { get; }
 
@@ -315,6 +327,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         SortContext.GenreTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Year },
         SortContext.AlbumTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Genre, TrackSortField.Year },
         SortContext.ArtistTracks => new[] { TrackSortField.Title, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
+        SortContext.FavoritesTracks => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },
         _ => new[] { TrackSortField.Title, TrackSortField.Artist, TrackSortField.Album, TrackSortField.Genre, TrackSortField.Year },    };
 
     [ObservableProperty]
@@ -380,6 +393,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public bool ShowEmptyLibrary => !HasTracks && !IsSearchActive;
 
     public bool ShowNoResults => IsSearchActive && !HasTracks;
+
+    public bool ShowFavoritesEmpty => !IsSearchActive && !HasFavoriteTracks;
+    public bool ShowFavoritesNoResults => IsSearchActive && !HasFavoriteTracks;
 
     public string SortDirectionLabel => IsSortDescending ? "DESC ↓" : "ASC ↑";
 
@@ -545,6 +561,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             }
 
             RefreshTracksView();
+            RefreshFavoritesView();
             RefreshAlbumsView();
             RefreshArtistsView();
             RefreshGenresView();
@@ -580,6 +597,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var selectedId = SelectedTrack?.Id;
 
         RefreshTracksView();
+        RefreshFavoritesView();
         if (SelectedAlbum is not null)
         {
             RefreshAlbumTracksView();
@@ -633,9 +651,24 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         foreach (var t in _allTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in Tracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+        foreach (var t in FavoriteTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in AlbumTracks.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in ArtistSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
         foreach (var t in GenreSongs.Where(t => t.Id == trackId)) t.IsPlaying = isPlaying;
+    }
+
+    /// <summary>
+    /// Propagates a favorite toggle to every list instance that represents the
+    /// same track (by Id), matching the playing-state propagation.
+    /// </summary>
+    private void SetFavoriteState(Guid trackId, bool isFavorite)
+    {
+        foreach (var t in _allTracks.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
+        foreach (var t in Tracks.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
+        foreach (var t in FavoriteTracks.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
+        foreach (var t in AlbumTracks.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
+        foreach (var t in ArtistSongs.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
+        foreach (var t in GenreSongs.Where(t => t.Id == trackId)) t.IsFavorite = isFavorite;
     }
 
     /// <summary>
@@ -649,6 +682,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var seen = new HashSet<Track>(ReferenceEqualityComparer.Instance);
         var targets = _allTracks.Where(t => t.Id == source.Id)
             .Concat(Tracks.Where(t => t.Id == source.Id))
+            .Concat(FavoriteTracks.Where(t => t.Id == source.Id))
             .Concat(AlbumTracks.Where(t => t.Id == source.Id))
             .Concat(ArtistSongs.Where(t => t.Id == source.Id))
             .Concat(GenreSongs.Where(t => t.Id == source.Id));
@@ -675,6 +709,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var inSelectedGenre = SelectedGenre is not null && GenreSongs.Any(t => t.Id == source.Id);
 
         RefreshTracksView();
+        RefreshFavoritesView();
 
         RefreshAlbumsView();
         if (inSelectedAlbum)
@@ -747,6 +782,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         foreach (var t in _allTracks) t.IsPlaying = false;
         foreach (var t in Tracks) t.IsPlaying = false;
+        foreach (var t in FavoriteTracks) t.IsPlaying = false;
         foreach (var t in AlbumTracks) t.IsPlaying = false;
         foreach (var t in ArtistSongs) t.IsPlaying = false;
         foreach (var t in GenreSongs) t.IsPlaying = false;
@@ -803,6 +839,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             newContext = CurrentTab switch
             {
+                NavigationTab.Favorites => SortContext.FavoritesTracks,
                 NavigationTab.Albums => SortContext.AlbumsList,
                 NavigationTab.Artists => SortContext.ArtistsList,
                 NavigationTab.AlbumArtists => SortContext.AlbumArtistsList,
@@ -861,6 +898,20 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         foreach (var track in ordered)
         {
             Tracks.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
+        }
+    }
+
+    private void RefreshFavoritesView()
+    {
+        var term = SearchText;
+        var filtered = _allTracks.Where(t => t.IsFavorite).Where(t => MatchesSearch(t, term));
+        var ordered = SortTracks(filtered).ToList();
+
+        var existing = FavoriteTracks.ToDictionary(t => t.Id);
+        FavoriteTracks.Clear();
+        foreach (var track in ordered)
+        {
+            FavoriteTracks.Add(existing.TryGetValue(track.Id, out var kept) ? kept : track);
         }
     }
 
@@ -1338,6 +1389,44 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private void ClearSearch() => SearchText = "";
 
     [RelayCommand]
+    private async Task ToggleFavoriteAsync(Track? track)
+    {
+        if (track is null)
+        {
+            return;
+        }
+
+        var isFavorite = !track.IsFavorite;
+
+        // DB first: a failed write must not leave the UI showing a favorite that
+        // will disappear on the next launch.
+        try
+        {
+            await _repository.SetFavoriteAsync(track.Id, isFavorite);
+        }
+        catch
+        {
+            return;
+        }
+
+        SetFavoriteState(track.Id, isFavorite);
+        RefreshFavoritesView();
+        ShowFavoriteToast(track, isFavorite);
+    }
+
+    private void ShowFavoriteToast(Track track, bool isFavorite)
+    {
+        ToastTitle = track.Title;
+        ToastMessage = isFavorite ? "Added to favorites" : "Removed from favorites";
+        ToastSubtitle = track.ArtistAlbum;
+        ToastDetail = "";
+        ToastCover = CreateToastCover(track);
+        // Bounce the flag so a toast already on screen restarts the 6 s timer.
+        ShowToast = false;
+        ShowToast = true;
+    }
+
+    [RelayCommand]
     private void SelectAlbum(AlbumSummary album)
     {
         SelectedAlbum = album;
@@ -1642,6 +1731,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         // another view.
         for (var i = Tracks.Count - 1; i >= 0; i--)
             if (Tracks[i].Id == track.Id) Tracks.RemoveAt(i);
+        for (var i = FavoriteTracks.Count - 1; i >= 0; i--)
+            if (FavoriteTracks[i].Id == track.Id) FavoriteTracks.RemoveAt(i);
         for (var i = AlbumTracks.Count - 1; i >= 0; i--)
             if (AlbumTracks[i].Id == track.Id) AlbumTracks.RemoveAt(i);
         for (var i = ArtistSongs.Count - 1; i >= 0; i--)
@@ -1670,6 +1761,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 public enum SortContext
 {
     AllSongsTracks,
+    FavoritesTracks,
     AlbumsList,
     AlbumTracks,
     ArtistsList,

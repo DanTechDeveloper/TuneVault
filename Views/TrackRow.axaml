@@ -12,7 +12,7 @@
              x:Class="TuneVault.Views.TrackRow"
              x:DataType="models:Track">
 
-    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto"
           ColumnSpacing="10"
           Margin="4,6"
          >
@@ -74,19 +74,40 @@
                 HorizontalContentAlignment="Center"
                 VerticalContentAlignment="Center"
                 Background="Transparent"
+                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Library.ToggleFavoriteCommand}"
+                CommandParameter="{Binding .}"
+                ToolTip.Tip="{Binding FavoriteToolTip}">
+            <Panel>
+                <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           IsVisible="{Binding IsFavorite}"/>
+                <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           IsVisible="{Binding !IsFavorite}"/>
+            </Panel>
+        </Button>
+
+        <Button Grid.Column="3"
+                Width="36"
+                Height="36"
+                Padding="0"
+                CornerRadius="18"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Background="Transparent"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Playback.PlayTrackCommand}"
                 CommandParameter="{Binding .}"
                 ToolTip.Tip="{Binding PlayPauseToolTip}">
             <materialIcons:MaterialIcon Kind="{Binding PlayPauseIconKind}" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}" Background="Transparent" />
         </Button>
 
-        <TextBlock Grid.Column="3"
+        <TextBlock Grid.Column="4"
                    Text="{Binding DurationDisplay}"
                    VerticalAlignment="Center"
                    FontSize="{StaticResource FontSizeSmMd}"
                    Opacity="0.65"/>
 
-        <Button Grid.Column="4"
+        <Button Grid.Column="5"
                 Content="⋮"
                 Width="28"
                 Height="28"

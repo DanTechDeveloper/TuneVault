@@ -29,6 +29,9 @@ public enum TrackSortField
 /// <summary>Result of persisting one track, used to report duplicates and failures.</summary>
 public sealed record AddResult(Track Track, AddOutcome Outcome);
 
+/// <summary>Last playback session, restored on startup in the paused state.</summary>
+public sealed record PlaybackSessionState(Guid TrackId, double PositionSeconds, bool IsShuffle);
+
 /// <summary>
 /// Persistence boundary for the music library. Keeps SQLite types out of the
 /// ViewModels, mirroring <see cref="IAudioMetadataReader"/> and <see cref="IAudioPlayer"/>.
@@ -61,5 +64,18 @@ public interface ILibraryRepository
 
     Task UpdateAsync(Track track, CancellationToken cancellationToken = default);
 
+    /// <summary>Sets the favorite flag without touching any metadata columns.</summary>
+    Task SetFavoriteAsync(Guid id, bool isFavorite, CancellationToken cancellationToken = default);
+
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Last saved track/position/shuffle, or null when nothing was saved.</summary>
+    Task<PlaybackSessionState?> LoadPlaybackStateAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the resume point; a null track id clears it.</summary>
+    Task SavePlaybackStateAsync(
+        Guid? trackId,
+        double positionSeconds,
+        bool isShuffle,
+        CancellationToken cancellationToken = default);
 }

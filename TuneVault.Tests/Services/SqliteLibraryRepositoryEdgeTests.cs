@@ -156,4 +156,116 @@ public class SqliteLibraryRepositoryEdgeTests : IDisposable
         var loaded = await _repo.LoadAllAsync();
         Assert.Null(loaded[0].AlbumArtist);
     }
+
+    [Fact]
+    public async Task PlaybackState_RoundTrips()
+    {
+        var t = MakeTrack("Summer Of 69", "Bryan Adams");
+        await _repo.AddRangeAsync(new[] { t });
+        var stored = (await _repo.LoadAllAsync())[0];
+
+        await _repo.SavePlaybackStateAsync(stored.Id, 120, true);
+
+        var state = await _repo.LoadPlaybackStateAsync();
+        Assert.NotNull(state);
+        Assert.Equal(stored.Id, state!.TrackId);
+        Assert.Equal(120, state.PositionSeconds, 3);
+        Assert.True(state.IsShuffle);
+    }
+
+    [Fact]
+    public async Task PlaybackState_NullTrack_Clears()
+    {
+        var t = MakeTrack("Cleared", "A");
+        await _repo.AddRangeAsync(new[] { t });
+        var stored = (await _repo.LoadAllAsync())[0];
+        await _repo.SavePlaybackStateAsync(stored.Id, 30, false);
+
+        await _repo.SavePlaybackStateAsync(null, 0, false);
+
+        Assert.Null(await _repo.LoadPlaybackStateAsync());
+    }
+
+    [Fact]
+    public async Task PlaybackState_TrackDeleted_Cascades()
+    {
+        var t = MakeTrack("Deleted", "A");
+        await _repo.AddRangeAsync(new[] { t });
+        var stored = (await _repo.LoadAllAsync())[0];
+        await _repo.SavePlaybackStateAsync(stored.Id, 30, false);
+
+        await _repo.DeleteAsync(stored.Id);
+
+        Assert.Null(await _repo.LoadPlaybackStateAsync());
+    }
+
+    [Fact]
+    public async Task InitializeAsync_FromV2_CreatesPlaybackStateTable()
+    {
+        using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_dbPath}"))
+        {
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE playback_state; PRAGMA user_version = 2;";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await _repo.InitializeAsync();
+
+        var t = MakeTrack("Migrated", "A");
+        await _repo.AddRangeAsync(new[] { t });
+        var stored = (await _repo.LoadAllAsync())[0];
+        await _repo.SavePlaybackStateAsync(stored.Id, 5, false);
+        Assert.NotNull(await _repo.LoadPlaybackStateAsync());
+    }
+
+    [Fact]
+    public async Task SetFavoriteAsync_PersistsAndReloads()
+    {
+        await _repo.AddRangeAsync(new[] { MakeTrack("Favorite", "A") });
+        var stored = (await _repo.LoadAllAsync())[0];
+        Assert.False(stored.IsFavorite);
+
+        await _repo.SetFavoriteAsync(stored.Id, true);
+        Assert.True((await _repo.LoadAllAsync())[0].IsFavorite);
+
+        await _repo.SetFavoriteAsync(stored.Id, false);
+        Assert.False((await _repo.LoadAllAsync())[0].IsFavorite);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PreservesFavorite()
+    {
+        await _repo.AddRangeAsync(new[] { MakeTrack("Favorite", "A") });
+        var stored = (await _repo.LoadAllAsync())[0];
+        await _repo.SetFavoriteAsync(stored.Id, true);
+
+        stored.Title = "Renamed";
+        await _repo.UpdateAsync(stored);
+
+        var reloaded = (await _repo.LoadAllAsync())[0];
+        Assert.Equal("Renamed", reloaded.Title);
+        Assert.True(reloaded.IsFavorite);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_FromV3_AddsFavoriteColumn()
+    {
+        using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_dbPath}"))
+        {
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "ALTER TABLE tracks DROP COLUMN is_favorite; PRAGMA user_version = 3;";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await _repo.InitializeAsync();
+
+        await _repo.AddRangeAsync(new[] { MakeTrack("Migrated", "A") });
+        var stored = (await _repo.LoadAllAsync())[0];
+        Assert.False(stored.IsFavorite);
+
+        await _repo.SetFavoriteAsync(stored.Id, true);
+        Assert.True((await _repo.LoadAllAsync())[0].IsFavorite);
+    }
 }

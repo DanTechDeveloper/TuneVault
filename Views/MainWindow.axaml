@@ -58,6 +58,16 @@
                 <BlurEffect Radius="4"/>
             </Setter>
         </Style>
+        <Style Selector="Border.now-playing Image.cover-bg">
+            <Setter Property="Effect">
+                <BlurEffect Radius="50"/>
+            </Setter>
+        </Style>
+        <Style Selector="Border.now-playing.lyrics Image.cover-bg">
+            <Setter Property="Effect">
+                <BlurEffect Radius="110"/>
+            </Setter>
+        </Style>
     </Window.Styles>
 
     <Grid>
@@ -149,6 +159,12 @@
                 CommandParameter="{x:Static vm:NavigationTab.AllSongs}"/>
 
         <Button Classes="nav-btn"
+                Classes.active="{Binding IsFavoritesTab}"
+                Content="{materialIcons:MaterialIconTextExt Kind=Heart, Text=My Favorites}"
+                Command="{Binding SelectTabCommand}"
+                CommandParameter="{x:Static vm:NavigationTab.Favorites}"/>
+
+        <Button Classes="nav-btn"
                 Classes.active="{Binding IsAlbumsTab}"
                 Content="{materialIcons:MaterialIconTextExt Kind=Album, Text=Albums}"
                 Command="{Binding SelectTabCommand}"
@@ -187,6 +203,7 @@
                     Padding="12">
                 <Grid>
                     <views:AllSongsView IsVisible="{Binding IsAllSongsTab}"/>
+                    <views:FavoritesView IsVisible="{Binding IsFavoritesTab}"/>
                     <views:AlbumsView   IsVisible="{Binding IsAlbumsTab}"/>
                     <views:AlbumArtistsView IsVisible="{Binding IsAlbumArtists}"/>
                     <views:ArtistsView  IsVisible="{Binding IsArtistsTab}"/>
@@ -204,24 +221,24 @@
         Background="{DynamicResource PanelBackgroundBrush}"
         BorderBrush="{DynamicResource BorderSubtleBrush}"
         BorderThickness="1"
-        Classes.playing="{Binding Playback.IsPlaying}">
+        Classes="now-playing"
+        Classes.playing="{Binding Playback.IsPlaying}"
+        Classes.lyrics="{Binding Playback.IsLyricsView}">
 
         <Grid>
-            <!-- Blurred album art background -->
+            <!-- Blurred album art background; heavier blur in lyrics view so only the lines stand out -->
             <Image
+                Classes="cover-bg"
                 Source="{Binding Playback.NowPlayingCoverArt}"
                 Stretch="UniformToFill"
-                IsVisible="{Binding Playback.HasNowPlayingCoverArt}">
-                <Image.Effect>
-                    <BlurEffect Radius="50"/>
-                </Image.Effect>
-            </Image>
+                IsVisible="{Binding Playback.HasNowPlayingCoverArt}"/>
 
             <!-- Readability scrim (darkened for text readability over any cover art) -->
             <Border Background="#88000000"/>
 
             <!-- Content -->
-            <StackPanel Spacing="22" Margin="22">
+            <StackPanel Spacing="22" Margin="22"
+                        IsVisible="{Binding !Playback.IsLyricsView}">
 
             <!-- Album Artwork -->
             <Border
@@ -249,27 +266,44 @@
                 </Panel>
             </Border>
 
-            <!-- Track Information -->
-            <StackPanel Spacing="5">
-                <TextBlock
-                    Text="{Binding Playback.NowPlayingTitle}"
-                    FontSize="{StaticResource FontSizeHero}"
-                    FontWeight="Bold"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
-                    TextAlignment="Center"
-                    TextWrapping="Wrap"
-                    TextTrimming="CharacterEllipsis"
-                    MaxLines="2"
-                    HorizontalAlignment="Center"/>
+            <!-- Track Information: symmetric 32px gutters keep the title centered beside the Lyrics button -->
+            <Grid ColumnDefinitions="32,*,32" ColumnSpacing="8">
+                <StackPanel Grid.Column="1" Spacing="5">
+                    <TextBlock
+                        Text="{Binding Playback.NowPlayingTitle}"
+                        FontSize="{StaticResource FontSizeHero}"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                        TextTrimming="CharacterEllipsis"
+                        MaxLines="2"
+                        HorizontalAlignment="Center"/>
 
-                <TextBlock
-                    Text="{Binding Playback.NowPlayingArtist}"
-                    FontSize="{StaticResource FontSizeMd}"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
-                    TextAlignment="Center"
-                    TextWrapping="Wrap"
-                    HorizontalAlignment="Center"/>
-            </StackPanel>
+                    <TextBlock
+                        Text="{Binding Playback.NowPlayingArtist}"
+                        FontSize="{StaticResource FontSizeMd}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                        HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <Button Grid.Column="2"
+                        Width="32"
+                        Height="32"
+                        Padding="0"
+                        CornerRadius="16"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Background="Transparent"
+                        IsVisible="{Binding Playback.HasNowPlayingTrack}"
+                        Command="{Binding Playback.OpenLyricsCommand}"
+                        ToolTip.Tip="Lyrics">
+                    <materialIcons:MaterialIcon Kind="QueueMusic" Width="18" Height="18"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </Button>
+            </Grid>
 
             <!-- Playback Progress -->
             <StackPanel Spacing="6">
@@ -301,7 +335,28 @@
             <StackPanel
                 Orientation="Horizontal"
                 HorizontalAlignment="Center"
-                Spacing="12">
+                Spacing="6">
+                <Button
+                    Width="36"
+                    Height="36"
+                    Padding="0"
+                    CornerRadius="18"
+                    VerticalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="Transparent"
+                    Command="{Binding Playback.ToggleShuffleCommand}"
+                    ToolTip.Tip="Shuffle">
+                    <Panel>
+                        <materialIcons:MaterialIcon Kind="Shuffle" Width="20" Height="20"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   IsVisible="{Binding Playback.IsShuffle}"/>
+                        <materialIcons:MaterialIcon Kind="Shuffle" Width="20" Height="20"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   IsVisible="{Binding !Playback.IsShuffle}"/>
+                    </Panel>
+                </Button>
+
                 <Button
                     Width="60"
                     Height="60"
@@ -343,6 +398,29 @@
                     ToolTip.Tip="Next">
                     <materialIcons:MaterialIcon Kind="SkipNext" Width="30" Height="30" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Button>
+
+                <Button
+                    Width="36"
+                    Height="36"
+                    Padding="0"
+                    CornerRadius="18"
+                    VerticalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="Transparent"
+                    IsVisible="{Binding Playback.HasNowPlayingTrack}"
+                    Command="{Binding Library.ToggleFavoriteCommand}"
+                    CommandParameter="{Binding Playback.NowPlayingTrack}"
+                    ToolTip.Tip="Favorite">
+                    <Panel>
+                        <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   IsVisible="{Binding Playback.IsNowPlayingFavorite}"/>
+                        <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   IsVisible="{Binding !Playback.IsNowPlayingFavorite}"/>
+                    </Panel>
+                </Button>
             </StackPanel>
 
             <!-- Volume -->
@@ -365,6 +443,10 @@
 
 
         </StackPanel>
+
+            <!-- Lyrics-focused view (swaps with the default player content) -->
+            <views:LyricsView IsVisible="{Binding Playback.IsLyricsView}"
+                              Margin="22"/>
         </Grid>
     </Border>
 

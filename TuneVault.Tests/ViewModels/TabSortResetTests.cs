@@ -50,4 +50,26 @@ public class TabSortResetTests
         }
         finally { Cleanup(dbPath); }
     }
+
+    [AvaloniaFact]
+    public void FavoritesTab_ResetsSortToDefault()
+    {
+        var (library, main, dbPath) = Create();
+        try
+        {
+            library.SortField = TrackSortField.Year;
+            library.IsSortDescending = true;
+
+            main.CurrentTab = NavigationTab.Favorites;
+
+            Assert.Equal(SortContext.FavoritesTracks, library.SortContext);
+            Assert.Equal(TrackSortField.Title, library.SortField);
+            Assert.False(library.IsSortDescending);
+            Assert.Equal(5, library.SortFields.Count);
+
+            main.CurrentTab = NavigationTab.AllSongs;
+            Assert.Equal(SortContext.AllSongsTracks, library.SortContext);
+        }
+        finally { Cleanup(dbPath); }
+    }
 }

@@ -11,11 +11,11 @@ namespace TuneVault.Services;
 
 /// <summary>
 /// SQLite implementation of <see cref="ILibraryRepository"/>. The database lives in
-/// the per-user application data folder so the app can be installed read-only.
+/// the project folder beside the app; TUNEVAULT_DB_PATH can override the location.
 /// </summary>
 public sealed class SqliteLibraryRepository : ILibraryRepository
 {
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 4;
 
     // SQLITE_CONSTRAINT_PRIMARYKEY / SQLITE_CONSTRAINT_UNIQUE
     private const int PrimaryKeyConstraint = 1555;
@@ -42,11 +42,13 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         }.ToString();
     }
 
-    public static string DefaultDatabasePath() =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "TuneVault",
-            "library.db");
+    public static string DefaultDatabasePath()
+    {
+        var overridePath = Environment.GetEnvironmentVariable("TUNEVAULT_DB_PATH");
+        return string.IsNullOrWhiteSpace(overridePath)
+            ? Path.Combine(Directory.GetCurrentDirectory(), "library.db")
+            : overridePath;
+    }
 
     private const string SchemaSql = """
         CREATE TABLE IF NOT EXISTS tracks (
@@ -61,6 +63,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             genre          TEXT,
             year           INTEGER NOT NULL DEFAULT 0,
             duration_ticks INTEGER NOT NULL DEFAULT 0,
+            is_favorite    INTEGER NOT NULL DEFAULT 0,
             date_added     TEXT NOT NULL
         );
 
@@ -70,6 +73,13 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         CREATE TABLE IF NOT EXISTS track_art (
             track_id TEXT PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
             data     BLOB NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS playback_state (
+            id               INTEGER PRIMARY KEY CHECK (id = 1),
+            track_id         TEXT NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+            position_seconds REAL NOT NULL DEFAULT 0,
+            is_shuffle       INTEGER NOT NULL DEFAULT 0
         );
         """;
 
@@ -115,6 +125,20 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                 "UPDATE tracks SET album_artist = artist WHERE album_artist IS NULL;", cancellationToken);
         }
 
+        if (version < 4)
+        {
+            // v3 -> v4: add is_favorite column (idempotent: ignore if it already exists)
+            try
+            {
+                await ExecuteAsync(connection, transaction,
+                    "ALTER TABLE tracks ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;", cancellationToken);
+            }
+            catch (SqliteException)
+            {
+                // column already present (fresh DB created by SchemaSql above)
+            }
+        }
+
         await ExecuteAsync(connection, transaction, $"PRAGMA user_version = {SchemaVersion};", cancellationToken);
         transaction.Commit();
     }
@@ -146,7 +170,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
         command.CommandText = $"""
             SELECT t.id, t.file_path, t.title, t.artist,
-                   t.album_artist, t.album, t.genre, t.year, t.duration_ticks, a.data
+                   t.album_artist, t.album, t.genre, t.year, t.duration_ticks, a.data, t.is_favorite
             FROM tracks t
             LEFT JOIN track_art a ON a.track_id = t.id
             ORDER BY {missingTerm}{column} {direction},
@@ -168,6 +192,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                 Year = (uint)reader.GetInt64(7),
                 Duration = TimeSpan.FromTicks(reader.GetInt64(8)),
                 PictureData = reader.IsDBNull(9) ? null : (byte[])reader.GetValue(9),
+                IsFavorite = reader.GetInt64(10) != 0,
             });
         }
 
@@ -316,12 +341,77 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         transaction.Commit();
     }
 
+    public async Task SetFavoriteAsync(Guid id, bool isFavorite, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE tracks SET is_favorite = $favorite WHERE id = $id;";
+        command.Parameters.AddWithValue("$favorite", isFavorite ? 1 : 0);
+        command.Parameters.AddWithValue("$id", id.ToString("D"));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM tracks WHERE id = $id;";
         command.Parameters.AddWithValue("$id", id.ToString("D"));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task<PlaybackSessionState?> LoadPlaybackStateAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT track_id, position_seconds, is_shuffle
+            FROM playback_state
+            WHERE id = 1;
+            """;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        if (!Guid.TryParse(reader.GetString(0), out var trackId))
+        {
+            return null;
+        }
+
+        return new PlaybackSessionState(trackId, reader.GetDouble(1), reader.GetInt64(2) != 0);
+    }
+
+    public async Task SavePlaybackStateAsync(
+        Guid? trackId,
+        double positionSeconds,
+        bool isShuffle,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+
+        if (trackId is null)
+        {
+            command.CommandText = "DELETE FROM playback_state WHERE id = 1;";
+        }
+        else
+        {
+            command.CommandText = """
+                INSERT INTO playback_state (id, track_id, position_seconds, is_shuffle)
+                VALUES (1, $track, $position, $shuffle)
+                ON CONFLICT(id) DO UPDATE SET
+                    track_id = excluded.track_id,
+                    position_seconds = excluded.position_seconds,
+                    is_shuffle = excluded.is_shuffle;
+                """;
+            command.Parameters.AddWithValue("$track", trackId.Value.ToString("D"));
+            command.Parameters.AddWithValue("$position", positionSeconds);
+            command.Parameters.AddWithValue("$shuffle", isShuffle ? 1 : 0);
+        }
+
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

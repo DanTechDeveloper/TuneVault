@@ -14,6 +14,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private NavigationTab _currentTab = NavigationTab.AllSongs;
 
     public bool IsAllSongsTab => CurrentTab == NavigationTab.AllSongs;
+    public bool IsFavoritesTab => CurrentTab == NavigationTab.Favorites;
     public bool IsAlbumsTab => CurrentTab == NavigationTab.Albums;
     public bool IsArtistsTab => CurrentTab == NavigationTab.Artists;
     public bool IsAlbumArtists => CurrentTab == NavigationTab.AlbumArtists;
@@ -38,6 +39,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     partial void OnCurrentTabChanged(NavigationTab value)
     {
         OnPropertyChanged(nameof(IsAllSongsTab));
+        OnPropertyChanged(nameof(IsFavoritesTab));
         OnPropertyChanged(nameof(IsAlbumsTab));
         OnPropertyChanged(nameof(IsArtistsTab));
         OnPropertyChanged(nameof(IsAlbumArtists));

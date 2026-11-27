@@ -1,90 +1,64 @@
 # TuneVault
 
-Avalonia desktop local-music player. Single project, .NET 9, MVVM with service interfaces.
+Avalonia 11 local music player, .NET 9, MVVM with service interfaces. One app project plus `TuneVault.Tests/`.
 
-## Build and run
+## Build / test
 
-- SDK pinned to **9.0.320** by `global.json`. `/usr/bin/dotnet` may be 8; use the shim at `~/.local/bin/dotnet` so `dotnet --version` prints `9.0.320`.
-- IDE `NETSDK1045`/`CS0012` (`System.Runtime 8.0.0.0`) means its language server picked SDK 8. Trust `dotnet build`, then restart the C# language server.
-- Build: `dotnet build TuneVault.csproj`
-- Run: `dotnet run --project TuneVault.csproj` (opens a window, blocks)
-- Linux playback needs `libasound2` and `libsndfile1`. Other native requirements: `docs/AUDIO.md`. Implicit state machines/invariants: `docs/STATE_MACHINES.md`.
+- SDK pinned to **9.0.320** (`global.json`). If `dotnet --version` prints 8, use the shim at `~/.local/bin/dotnet`. IDE `NETSDK1045`/`CS0012` (`System.Runtime 8.0.0.0`) is a stale language server: trust `dotnet build`, then restart it.
+- Build: `dotnet build TuneVault.csproj`. Run: `dotnet run --project TuneVault.csproj` (opens a window, blocks).
+- Tests: `cd TuneVault.Tests && dotnet test`; one test: `dotnet test --filter "FullyQualifiedName~<TestName>"`. No solution file — root `dotnet test` does nothing.
+- The main project excludes tests via `<Compile Remove="TuneVault.Tests\**\*.cs">` but also globs `**/*.cs`: a stray `.cs` anywhere in the main project breaks the build. Never edit `obj/`/`bin/`.
+- Linux playback needs `libasound2` and `libsndfile1`. Native details: `docs/AUDIO.md`. Implicit state machines/invariants: `docs/STATE_MACHINES.md`.
 
-## Wiring
+## Wiring / conventions
 
-- `Program.Main` → `App.OnFrameworkInitializationCompleted` is the composition root; it resolves the Last.fm key, builds `LastFmService`, and passes it to `MetadataEditorViewModel(filePicker, library, audiometa)`.
-- ViewModels split by feature; `MainWindowViewModel` is a thin shell. Views bind nested paths (`Library.*`, `Playback.*`, `Editor.*`).
-- `MainWindow` owns the 250 ms `DispatcherTimer` → `RefreshPlayback()` and the 6 s toast timer. No Avalonia controls/timers/storage-provider types in `ViewModels/`.
-- Compiled bindings enabled project-wide. Every new window and `DataTemplate` needs `x:DataType`.
-- UI actions use `[RelayCommand]`; ViewModels inherit `ObservableObject` and must be `partial`. Avalonia has no `CommandManager`: use `[NotifyCanExecuteChangedFor]` or `command.NotifyCanExecuteChanged()`.
+- Composition root: `Program.Main` → `App.OnFrameworkInitializationCompleted` (resolves the Last.fm key, builds `LastFmService`, passes it to `MetadataEditorViewModel(filePicker, library, audiometa)`).
+- ViewModels split by feature; `MainWindowViewModel` is a thin shell. Views bind nested `Library.*` / `Playback.*` / `Editor.*`. No Avalonia controls, timers, or SQLite types in `ViewModels/`.
+- Compiled bindings are on project-wide: every new window and `DataTemplate` needs `x:DataType`.
+- ViewModels are `partial ObservableObject`; UI actions are `[RelayCommand]`. Avalonia has no `CommandManager` — use `[NotifyCanExecuteChangedFor]` / `command.NotifyCanExecuteChanged()`.
+- Toasts live on `LibraryViewModel` (`ShowToast`, `Toast*`); `MainWindow` owns the 6 s timer. Setting `ShowToast = true` while already true raises no change, so toast helpers bounce false→true to restart the timer.
+- Lyrics are file-based via `ILyricsService`: sidecar `.lrc` (same folder/base name, also `.LRC`) then embedded `TagLib.Tag.Lyrics`; no database column and no network. `LrcParser` handles all LRC timestamp forms, offsets, repeated stamps, and strips enhanced word tags.
 
-## Audio, metadata, online lookup
+## Audio / metadata / lookup
 
-- Use **NAudio 3** APIs. Always decode with `SoundFileReader` (libsndfile). `AudioFileReader`/`Mp3FileReader` are Windows-only in NAudio 3.
-- Output: `AlsaOut` on Linux, `WasapiPlayer` on Windows; macOS throws `PlatformNotSupportedException`.
-- Supported: WAV, MP3, FLAC, OGG/Vorbis, Opus, AIFF. Metadata via TagLibSharp. File dialogs via `IFilePickerService`.
-- `IAudiometaService`/`LastFmService` is optional online lookup. Key resolution in `App.axaml.cs`: `AUDIOMETA_API_KEY`, then `LastFm:ApiKey` in gitignored `appsettings.local.json` (also checked via `LASTFM_API_KEY`). No key/network must degrade to empty results, never block manual editing; tests mock the service (no network).
+- NAudio 3: decode only with `SoundFileReader` (libsndfile); `AudioFileReader`/`Mp3FileReader` are Windows-only. Output `AlsaOut` on Linux, `WasapiPlayer` on Windows; macOS throws `PlatformNotSupportedException`.
+- Tags via TagLibSharp; file dialogs via `IFilePickerService`.
+- Last.fm key order in `App.axaml.cs`: `AUDIOMETA_API_KEY`, then `LastFm:ApiKey` in gitignored `appsettings.local.json` (`LASTFM_API_KEY` also checked). No key/network ⇒ empty results, never block manual editing; tests mock `IAudiometaService` (no network).
 
 ## Persistence
 
-- SQLite via `ILibraryRepository`/`SqliteLibraryRepository`. DB: `library.db` in `Environment.SpecialFolder.ApplicationData` + `TuneVault`.
-- Never reference `Microsoft.Data.Sqlite`/`SqliteConnection` from `ViewModels/` or `Models/`.
-- Schema versioned with `PRAGMA user_version` (currently 2), created by `InitializeAsync()`, idempotent. v1→v2 adds `album_artist` (backfilled from `artist`).
-- Duplicate rules: `tracks.path_key` UNIQUE; `tracks.identity_key` UNIQUE (lower-cased title+artist, NULL for `"Untitled track"`). Imports insert the batch in one transaction and report per-row `AddOutcome`.
-- Cover art in `track_art` (`ON DELETE CASCADE`). Removals delete the row (and art), never the file. Metadata edits write file tags *and* DB; collisions rejected before tags written.
-- `Track.IsMissing` computed at load from `File.Exists`, never persisted.
-- All Songs ordering is SQL-side (`LoadAllAsync(sortBy, descending)`). `ReloadSortedAsync` rebuilds views but reuses `Track` instances by `Id` so `PlaybackViewModel`'s loaded-track reference stays valid.
-- Search and album/artist/genre filtering are in-memory from `_allTracks` (loaded once). Search never switches tabs. Applying a term debounces 350 ms; **clearing is inline** and raises `SearchCleared` exactly once (`ReloadSortedAsync(fromSearch: true)` flag guards against a stale debounce post).
+- `ILibraryRepository` / `SqliteLibraryRepository`; `library.db` in the project folder (beside `TuneVault.csproj`), resolved by `DefaultDatabasePath()` from the current working directory with a `TUNEVAULT_DB_PATH` override. Run the app from the project root or it creates an empty DB elsewhere; DB files are git-ignored and `.devdbrc` must track the same path. Never reference `Microsoft.Data.Sqlite`/`SqliteConnection` from `ViewModels/` or `Models/`.
+- `InitializeAsync()` is idempotent and migrates via `PRAGMA user_version` (currently 4): v2 `album_artist` (backfilled from `artist`), v3 `playback_state` (single row: track/position/shuffle), v4 `tracks.is_favorite` (default 0). An additive migration must tolerate the column already existing on a fresh DB.
+- `tracks.path_key` UNIQUE; `tracks.identity_key` UNIQUE (lower-cased title+artist, NULL for `"Untitled track"`). Imports insert one transaction and report per-row `AddOutcome`.
+- `track_art` cascades on delete; removals delete the DB row and art, never the file. `Track.IsMissing` is computed from disk at load, never persisted.
+- All Songs ordering is SQL-side (`LoadAllAsync(sortBy, descending)`); other filtering/sorting is in-memory from `_allTracks` (loaded once). `ReloadSortedAsync` reuses `Track` instances by `Id` so playback's loaded-track reference stays valid. `SetFavoriteAsync` touches only the favorite column; `UpdateAsync` leaves it untouched.
 
-## Views / layers
+## State invariants (hard-won)
 
-- Albums: list → filtered songs. Artists: artist list → all artist songs. Album Artists: artist list → detail (albums + all-songs entry) → album songs / all songs. Genres: genre list → all genre songs. Tab switching resets drill-down state (`SelectedAlbum`, `SelectedArtist`, `SelectedGenre`) to Layer 1.
-- Search filters summary lists by name, so playing/searched tracks collapse album/artist detail; clearing reselects album/artist/genre from `SelectedTrack`. `CurrentQueue` can therefore change purely from a search clear — account for this in queue logic and tests.
+- Next/Prev follow the queue **captured when the track loaded**, not the current view; boundary presses toast instead of wrapping. Auto-advance only at track end, through the same path. No wrap-around; Previous at the first track restarts it.
+- Track end is detected **only** in `RefreshPlayback()`: `wasPlaying && !IsPlaying && Position >= Duration - 500 ms`. A manual seek to the exact end counts as finished.
+- Keep `SetPosition(0)` **before** `DurationSeconds = ...` in every load branch: `Slider.Maximum` shrinks while `Value` still holds the old track's end, and that writes back a seek so the new track instantly finishes and skips a song.
+- `_loadedQueue` is a snapshot. A sort change rebuilds it only when `_loadedQueueSource == CurrentQueueSource` (same view). `SearchCleared` rebuilds from the restored `CurrentQueue` and is otherwise a pure no-op: no loaded track, `CurrentTab != _loadedQueueTab`, or loaded track's `Id` absent from the restored collection. Never `Load`/`Seek`/`Stop` or change the loaded track there. Do **not** use the queue-source *string* as the cross-view guard — reselects change it without navigation.
+- Queue sources/labels: All Songs, Favorites, Album, Artist Songs, Album Artist Songs, Genre. `CurrentQueue` picks from the active view; Favorites is a flat tab backed by `FavoriteTracks`.
+- Search never switches tabs. Applying a term debounces 350 ms; clearing is inline and raises `SearchCleared` exactly once. Search also filters summary lists by name, so playing/searched tracks collapse album/artist detail; clearing reselects from `SelectedTrack`.
+- Tab switch or drill-down resets sort to that context's first `SortFields` entry, ascending; `_isResettingSort` suppresses reloads from the reset. Missing album/genre/year sort last in both directions, then the column, then title ascending. `FavoritesTracks` uses the full field set.
+- `ToggleFavoriteAsync` writes the DB first, then propagates by `Id` and refreshes `FavoriteTracks`; a failed write leaves the UI unchanged. Toggling never calls `Load`/`Seek`/`Stop` and does not rewrite the loaded queue.
+- Lyrics ride the existing 250 ms `RefreshPlayback()` tick: `UpdateActiveLyric` flips `IsActive` only when the line index changes. Loading a different track clears lines and reloads them if the lyrics view is open. Past the last line's timestamp the block loops back so the next line is the first again — this is lyrics-only, not the track queue's no-wrap rule.
 
-## Reusable UI
+## UI / views
 
-- `Views/TrackRow.axaml` (via `TrackRowTemplate`) and `Views/AudiometaTrackRow.axaml` (via `AudiometaTrackRowTemplate`) in `App.axaml`. Both use `$parent[Window]` to reach `MainWindowViewModel`.
-- `AlbumRowTemplate` in `App.axaml` renders album tiles.
-- Material Icons via `Material.Icons.Avalonia` 2.4.1; icon-only buttons have transparent backgrounds.
-- Sort controls live in each view header, context-aware via `Library.SortFields`/`Library.SortContext`.
-- `App.axaml` holds design tokens. Views use `{DynamicResource ...Brush}` for colors and `{StaticResource FontSize...}` for text sizes.
-
-## Playback navigation
-
-- Next/Prev follows the queue captured when the track was loaded, so browsing other views does not hijack playback; with nothing loaded it falls back to `CurrentQueue`. Boundary presses toast instead of wrapping.
-- No wrap-around; Previous at the first track restarts it. Auto-advance happens only when a track ends and uses the same queue/label/toast path as Next.
-- Track end is detected only in `RefreshPlayback()`: `wasPlaying && !IsPlaying && Position >= Duration - 500 ms`. A manual seek to the exact end counts as finished.
-- Keep `SetPosition(0)` **before** `DurationSeconds = ...` in every load branch. `Slider.Maximum` binds to `DurationSeconds` and `Value` TwoWay to `PositionSeconds`; shrinking the maximum while the value sits at the old track's end writes that end back as a seek, so the new track instantly finishes and skips a song.
-- `_loadedQueue` is a snapshot; a sort change in the **same** view rebuilds it from `CurrentQueue` (source guard `_loadedQueueSource == CurrentQueueSource`). Never rebuild on sorting a different view.
-- On `SearchCleared`, rebuild `_loadedQueue` from the restored `CurrentQueue` so Next/Prev leave the old filtered results. Guards, all pure no-ops otherwise: no loaded track, `CurrentTab != _loadedQueueTab` (explicit tab switch), or loaded track's `Id` absent from the restored collection. Never call `Load`/`Seek`/`Stop` or change `_loadedTrack`/`NowPlayingTrack` here.
-- Do **not** use the queue-source *string* as the cross-view guard for search clear: reselects during the clear change it (e.g. `AllSongs` → `Album`) even without user navigation. `CurrentTab` only changes on explicit tab switches.
-- Boundary toasts are context-aware (coarse labels: All Songs / Album / Artist Songs / Album Artist Songs / Genre).
-
-## Sorting
-
-- `TrackSortField` is the shared key. `Library.SortFields` changes with `SortContext`/`CurrentTab`.
-- Changing tab or drill-down resets sort to that context's first `SortFields` entry, ascending (`ResetSortToDefault()`); `_isResettingSort` suppresses reloads from those setter changes. Do not let a sort from one view leak into another.
-- Missing album/genre/year sort last in both directions, then the chosen column, then title (always ascending).
-- `SortContext.GenresList` → Genre only; `AlbumArtistAlbums` → Title + Year; `AlbumArtistTracks` → Title, Album, Genre; `AlbumArtistAllTracks` → Title, Album, Genre, Year.
-
-## Testing
-
-- `TuneVault.Tests/` (xUnit + Avalonia.Headless.XUnit + Moq), `[AvaloniaFact]`, headless. Run from that directory — there is no solution file, so root `dotnet test` does not work.
-- Build/run: `cd TuneVault.Tests && dotnet test`; one test: `dotnet test --filter "FullyQualifiedName~<TestName>"`.
-- Main project excludes tests via `Compile Remove`; a stray `.cs` anywhere in the main project breaks build (`**/*.cs` glob). Never edit `obj/`/`bin/`.
-- Playback tests mock `IAudioPlayer` (`Position`/`Duration`/`IsPlaying`) and call `Playback.RefreshPlayback()` directly. Online-lookup tests mock `IAudiometaService`. Focused suites: `PlaybackSearchContextTests`, `TabSortResetTests`, `MetadataEditorAudiometaTests`.
+- Albums / Artists / Album Artists / Genres drill down; tab switching resets `SelectedAlbum`, `SelectedArtist`, `SelectedGenre` to Layer 1. Favorites is flat with its own content and sort controls (`Views/FavoritesView.axaml` mirrors `AllSongsView`).
+- `TrackRow` (via `TrackRowTemplate`) is the shared library row: heart, play/pause, duration, ⋮, NOW PLAYING. `AudiometaTrackRow` is only for Last.fm results — not a library track, so it has no favorite/heart.
+- Now Playing swaps between its default content and `Views/LyricsView.axaml` via `Playback.IsLyricsView`; the lyrics button is in the track-info row because the transport row is already full at 760 px. Lyric text styling lives in that view (style token references use `{DynamicResource}`); the active line advances down the list and wraps back to the first only after the last line; `AutoScrollToSelectedItem` is off: `LyricsView.axaml.cs` anchors the active line by measuring its realized container and setting `ScrollViewer.Offset` on a layout pass. The Now Playing background cover art blur goes 50 → 110 via the `Border.now-playing.lyrics Image.cover-bg` style in `MainWindow.axaml` (`Classes.lyrics` binds `Playback.IsLyricsView`).
+- Material Icons via `Material.Icons.Avalonia`. Use `{DynamicResource ...Brush}` for tokens and `{StaticResource FontSize...}` for text; theme is Dark, global `FontFamily` from `MainWindow`. Exception: inside a `<Style>` Setter, App.axaml tokens must use `{DynamicResource ...}` — `StaticResource` throws `KeyNotFoundException` in headless XAML smoke tests.
+- `$parent[Window].((vm:MainWindowViewModel)DataContext)` is how row templates reach shell commands; if it fails, resolve the Window DataContext in code-behind.
+- `ClearSearchCommand` has no `ClearSearchText`/`ClearField` aliases — bind it directly. Toast is bottom-right; modal scrims `#88000000`.
 
 ## Gotchas
 
-- `_allTracks` is the source for in-memory rebuilds. `SetTrackPlayingState` must update it too, and `Remove` must drop the track from it and every view collection (by `Id`).
-- `ClearAllPlayingState()` clears `IsPlaying` on every track instance held anywhere; call it on playback transitions.
-- Summary collections are immutable records rebuilt on refresh; reselect by key instead of reusing instances.
-- `Track` has **no** `Equals`/`GetHashCode` override (reference equality); match by `Id` explicitly — different instances with the same `Id` are possible.
-- `ApplyTrackMetadata` propagates edits (incl. `AlbumArtist`) to every instance and rebuilds summaries; call it after mutating a track.
-- Metadata editor validates `EditYear` (empty → 0/unknown; else uint ≤ 9999). Invalid input sets `EditYearError` and blocks save without closing. `Year == 0` shows "Unknown Year". It writes the `AlbumArtists` tag from `track.AlbumArtist` (fallback: new artist).
-- Unknown fallbacks: `"Unknown Artist"`; album/genre stored `null`, normalized to `"Unknown Album"`/`"Unknown Genre"` in views and search; title `"Untitled track"`; year `0`.
-- `TrackRow`/`AudiometaTrackRow` use `$parent[Window]`; if it fails, resolve the Window DataContext in code-behind.
-- `ClearSearchCommand` has no `ClearSearchText`/`ClearField` aliases — views bind `Library.ClearSearchCommand` directly.
-- App theme is `Dark`; global `FontFamily` via `MainWindow.FontFamily`. Use `{DynamicResource ...}` (not `{StaticResource}`) for tokens inside views/styles.
-- Modal scrims `#88000000`; slider track/thumb `#40FFFFFF`/`#FFFFFF`; toast overlay 320–460 wide.
-- `ArtistSummary` first layer (Album Artists) shows `AlbumCount`, not track count. `IsAlbumArtistsTab` (not `IsAlbumArtists`) is the LibraryViewModel Album Artists flag.
+- `Track` has **no** `Equals`/`GetHashCode` — reference equality; match by `Id` explicitly. `SetTrackPlayingState`, `SetFavoriteState`, `ClearAllPlayingState`, `ApplyTrackMetadata`, and `Remove` must cover `_allTracks` plus every view collection (including `FavoriteTracks`); `Remove` drops rows by `Id`.
+- Summary collections are immutable records rebuilt on refresh: reselect by key, don't reuse instances. `ApplyTrackMetadata` propagates edits (incl. `AlbumArtist`) and rebuilds summaries; call it after mutating a track.
+- Unknown fallbacks: `"Unknown Artist"`, `"Untitled track"`, `Year == 0` → "Unknown Year"; album/genre stored `null`, normalized to `"Unknown Album"`/`"Unknown Genre"` in views and search.
+- Metadata editor validates `EditYear` (empty → 0; else uint ≤ 9999): invalid sets `EditYearError` and blocks save without closing. It writes the `AlbumArtists` tag from `track.AlbumArtist` (fallback: new artist).
+- `ArtistSummary` on the first Album Artists layer shows `AlbumCount`, not track count. The LibraryViewModel flag is `IsAlbumArtistsTab` (shell property is `IsAlbumArtists`).
+- Tests are headless `[AvaloniaFact]`; playback tests mock `IAudioPlayer` and call `RefreshPlayback()` directly. Focused suites: `PlaybackSearchContextTests`, `TabSortResetTests`, `PlaybackShuffleTests`, `FavoriteTracksTests`, `MetadataEditorAudiometaTests`, `PlaybackLyricsTests`, `LrcParserTests`, `LyricsViewTests`.

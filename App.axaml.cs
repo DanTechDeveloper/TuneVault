@@ -47,7 +47,8 @@ public partial class App : Application
             }
 
             var library = new LibraryViewModel(metadataReader, filePicker, repository);
-            var playback = new PlaybackViewModel(audioPlayer, library);
+            var lyrics = new LyricsService();
+            var playback = new PlaybackViewModel(audioPlayer, library, repository, lyrics);
 
             // Resolve the Audiometa API key without hard-coding it in source:
             // 1) AUDIOMETA_API_KEY env var, 2) appsettings.local.json (gitignored).

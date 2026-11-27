@@ -5,25 +5,30 @@ A modern, fast, and lightweight local music player desktop application built wit
 ## Features
 
 - **Local Music Playback**: Decodes WAV, MP3, FLAC, OGG/Vorbis, Opus, and AIFF audio files using native `libsndfile` decoders (`SoundFileReader`).
-- **Dynamic Library Views**: Tabbed navigation between **All Songs**, **Albums**, **Album Artists**, **Artists**, and **Genres**.
+- **Dynamic Library Views**: Tabbed navigation between **All Songs**, **My Favorites**, **Albums**, **Album Artists**, **Artists**, and **Genres**.
   - **Albums view**: two-layer — album list (with cover art, track counts, year, and an "Unknown Album" bucket) drilling into the album's filtered track list.
   - **Album Artists view**: artist list → artist detail (all-songs entry + album list) → album songs / all-artist songs, with reusable track rows.
   - **Artists view**: two-layer — artist list (grouped by track artist, with track counts, year, and an "Unknown Artist" bucket) → all artist songs.
   - **Genres view**: two-layer — genre list (with track counts, year, and an "Unknown Genre" bucket) → all genre songs.
+  - **My Favorites view**: flat list of favorited tracks with its own full sort controls and search-aware empty/no-results states.
 - **Audio File & Folder Importing**: Add individual audio files or import entire directory trees with recursive scanning.
-- **Persistent SQLite Library**: Added files and folders are stored in `library.db` under the per-user application data folder, so the library survives restarts.
+- **Persistent SQLite Library**: Added files and folders are stored in `library.db` beside `TuneVault.csproj`, so the library survives restarts. Set `TUNEVAULT_DB_PATH` to use a different location.
 - **Duplicate Audio Detection**: Duplicate rules are enforced by the database — same file path, or the same title/artist pair — and reported with a warning modal.
 - **Missing File Flagging**: Tracks whose file disappeared (or whose drive is offline) are flagged in the list instead of being deleted from the library.
 - **Tag & Metadata Editor**: In-app modal dialog to view and update track metadata (Title, Artist, Album, Genre, Year) and embed/replace/remove cover art via TagLibSharp directly in files. Validates Year (empty → unknown; invalid input shows an inline error and blocks save) and shows a TrackRow-style toast on success.
 - **Online Metadata Lookup (optional)**: Fetch title, artist, album, year, genre, and cover art from Last.fm inside the editor. Review results in a reusable row, apply them to the edit fields or apply only a cover image. Missing key, rate limits, or no connection fall back to an inline message; manual editing always works.
 - **In-List Play Controls**: Play and pause songs directly from library rows, or use the dedicated Now Playing sidebar with a seek progress slider and volume control.
-- **Now Playing Controls**: Previous, Play/Pause, and Next buttons with Google Material Icons; volume slider inside the Now Playing panel.
+- **Now Playing Controls**: Shuffle, Previous, Play/Pause, Next, and Favorite buttons with Google Material Icons; volume slider inside the Now Playing panel.
 - **Now Playing Subtitle**: Shows an appropriate prompt based on whether the library has tracks when nothing is playing.
-- **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
+- **Live Search**: Debounced (350ms) search bar at the top of the window filters the current view in memory by title, artist, album, and genre. Search is per view (All Songs / My Favorites / Albums / Artists / Album Artists / Genres) and never switches tabs. Each view shows a clarifying no-results message and a "Clear Field" button when a search returns nothing.
 - **Search-Aware Playback Context**: Playing a track from search results uses the filtered results as its navigation queue. Clearing the search restores the unfiltered collection of the active view as that queue and re-locates the current track by id — Previous/Next then follow the restored collection without restarting or replacing the playing track.
-- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, Albums, Album Artists, Artists, and Genres views, with a "NOW PLAYING" indicator and metadata (including year/unknown genre).
+- **Reusable Track Rows**: A shared `TrackRow` control renders track rows consistently across All Songs, My Favorites, Albums, Album Artists, Artists, and Genres views, with "NOW PLAYING", favorite heart buttons, and metadata (including year/unknown genre).
 - **Auto-Advance**: When a track finishes, playback moves to the next track in the queue it was started from (respecting that view's active sort). Stops at the end of the queue with a "Last track" toast — no wrap-around.
-- **Context-Aware Boundary Toasts**: Next/Prev at list boundaries report which view hit the boundary (All Songs / Album / Artist Songs / Album Artist Songs / Genre).
+- **Shuffle**: Material-icon toggle in the Now Playing transport shuffles the captured queue (the view the track was started from) with the current track first, so each track plays once. Turning it off restores that view's sort order without restarting playback.
+- **Favorites**: Google Material `Heart` / `HeartOutline` buttons on every track row and in the Now Playing panel toggle a per-track favorite, persisted in SQLite. The toggle shows an "Added to favorites" / "Removed from favorites" toast and never interrupts playback; playing from My Favorites keeps Next/Prev inside that list.
+- **Lyrics View**: A Google Material `QueueMusic` button in the Now Playing panel opens a focused lyrics screen with an `ArrowBack` button to return. Synced `.lrc` sidecar files (same folder and base name as the audio) or embedded plain lyrics highlight the current line as playback advances; the older lines scroll up while the active line stays in view, and after the last line the sequence wraps back to the first. Missing lyrics show a helpful empty state, and the background cover art blurs more so only the lines stand out. No online lookup and no database change.
+- **Resume Last Session**: Closing the window saves the last track, position, and shuffle mode to SQLite. On the next start the track is restored paused at that position (never auto-plays); pressing Play resumes from there. Queue context (album/search) is not restored — Next/Prev fall back to All Songs.
+- **Context-Aware Boundary Toasts**: Next/Prev at list boundaries report which view hit the boundary (All Songs / Favorites / Album / Artist Songs / Album Artist Songs / Genre).
 - **Album-Count Tiles**: The Album Artists list shows per-artist album counts ("1 Album" / "N Albums") instead of track counts.
 - **Unknown Year Display**: Tracks with a missing year show "Unknown Year" in the track row and leave the edit field blank.
 - **Context-Aware Sorting**: Each view has its own sort controls and valid sort options; list layers sort by name/artist/genre/year, while song layers sort by track fields. Switching tabs or drill-down levels resets to that view's default sort field and ascending order.
@@ -92,8 +97,8 @@ Without a key or an internet connection, the metadata editor keeps working in ma
 
 ## Persistence
 
-- Library is stored in `library.db` under the per-user application data folder (`~/.config/TuneVault/library.db` on Linux).
-- Schema is versioned (`PRAGMA user_version`, currently 2) and created/migrated by `ILibraryRepository.InitializeAsync()` on startup.
+- Library is stored in `library.db` in the project folder (beside `TuneVault.csproj`); override with the `TUNEVAULT_DB_PATH` environment variable. Run the app from the project root — a different working directory with no override creates an empty DB there. The DB files are git-ignored.
+- Schema is versioned (`PRAGMA user_version`, currently 4) and created/migrated idempotently by `ILibraryRepository.InitializeAsync()` on startup: v2 `album_artist`, v3 `playback_state`, v4 `tracks.is_favorite` (default 0).
 - Duplicate rules are enforced by the database (same file path, or same title/artist). Imports report per-row outcomes.
 - Removing a track deletes the row and its cover art, never the file on disk.
 
@@ -114,12 +119,14 @@ Without a key or an internet connection, the metadata editor keeps working in ma
   - `IAudioMetadataReader` / `SoundFileMetadataReader`: TagLibSharp and SoundFileReader metadata parser (incl. AlbumArtist).
   - `IAudiometaService` / `LastFmService`: Optional online track/artist lookup and cover downloads; all failures degrade to empty results.
   - `IFilePickerService` / `AvaloniaFilePickerService`: Audio and image file selection.
-  - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, schema v2 (incl. album_artist), and migrations.
+  - `ILibraryRepository` / `SqliteLibraryRepository`: SQLite library storage, duplicate rules, schema v4 (album_artist, playback_state, is_favorite), and migrations.
+  - `ILyricsService` / `LyricsService` + `LrcParser`: reads a same-folder `.lrc` sidecar first, then embedded plain lyrics, and parses line timestamps into display lines.
   - `LibraryKeys`: Path/identity normalization shared by imports and the database.
 - `Views/`:
   - `MainWindow.axaml`: Main window layout with header, search bar, navigation sidebar, dynamic content, now playing sidebar, toast overlay, and modal overlays.
-  - `AllSongsView.axaml`, `AlbumsView.axaml`, `AlbumArtistsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.
-  - `TrackRow.axaml`: Reusable track row control shared across views (cover, title, artist/album, play, duration, edit, NOW PLAYING indicator).
+  - `AllSongsView.axaml`, `FavoritesView.axaml`, `AlbumsView.axaml`, `AlbumArtistsView.axaml`, `ArtistsView.axaml`, `GenresView.axaml`: Library view tabs.
+  - `LyricsView.axaml` / `LyricsView.axaml.cs`: focused lyrics panel that swaps with the default Now Playing content; the code-behind anchors the active line by setting `ScrollViewer.Offset`.
+  - `TrackRow.axaml`: Reusable track row control shared across views (cover, title, artist/album, favorite heart, play/pause, duration, edit, NOW PLAYING indicator).
   - `AudiometaTrackRow.axaml`: Reusable row for Last.fm search results, with an "Use" button to apply metadata.
 - `App.axaml`: Application styles and shared resources (including `TrackRowTemplate`, `AudiometaTrackRowTemplate`, and `AlbumRowTemplate`).
 - `TuneVault.Tests/`: xUnit test project (Models, Services, ViewModels, Views smoke tests); online lookup is tested with a mocked `IAudiometaService`, so the suite needs no network.

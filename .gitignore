@@ -6,3 +6,6 @@ obj/
 *.sourcelink.json
 appsettings.local.json
 appsettings.*.local.json
+library.db
+library.db-wal
+library.db-shm

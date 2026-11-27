@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TuneVault.ViewModels"
+             xmlns:models="using:TuneVault.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="500"
+             d:DesignHeight="500"
+             x:Class="TuneVault.Views.FavoritesView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <Grid ColumnDefinitions="*,Auto"
+              Margin="0,0,0,12"
+              Background="{DynamicResource PanelBackgroundBrush}">
+            <StackPanel Spacing="2">
+                <TextBlock Text="My Favorites"
+                           FontSize="{StaticResource FontSizeXl}"
+                           FontWeight="SemiBold"/>
+
+                <TextBlock Text="{Binding Library.FavoriteTracks.Count, StringFormat='{}{0} favorite tracks'}"
+                           FontSize="{StaticResource FontSizeSmMd}"
+                           Opacity="0.6"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0">
+                <ComboBox ItemsSource="{Binding Library.SortFields}"
+                          SelectedItem="{Binding Library.SortField, Mode=TwoWay}"
+                          Width="150"
+                          IsEnabled="{Binding !Library.IsLoading}"/>
+                <Button Content="{Binding Library.SortDirectionLabel}"
+                        Command="{Binding Library.ToggleSortDirectionCommand}"
+                        Padding="10,6"
+                        IsEnabled="{Binding !Library.IsLoading}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Empty State Placeholder -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowFavoritesEmpty}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <materialIcons:MaterialIcon Kind="HeartOutline"
+                                           Width="48"
+                                           Height="48"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.4"/>
+
+                <TextBlock Text="No favorites yet"
+                           FontSize="{StaticResource FontSizeHeading}"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock Text="Tap the heart on any track to add it here."
+                           FontSize="{StaticResource FontSizeMd}"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Favorite Track Listing -->
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Library.FavoriteTracks}"
+                 SelectedItem="{Binding Library.SelectedTrack, Mode=TwoWay}"
+                 IsVisible="{Binding Library.HasFavoriteTracks}"
+                 ItemTemplate="{StaticResource TrackRowTemplate}">
+        </ListBox>
+
+        <!-- Search No Results -->
+        <Border Grid.Row="1"
+                Padding="32"
+                CornerRadius="10"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsVisible="{Binding Library.ShowFavoritesNoResults}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                <TextBlock Text="No favorites found"
+                           FontSize="{StaticResource FontSizeHeading}"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Try a different search term."
+                           FontSize="{StaticResource FontSizeMd}"
+                           Opacity="0.65"
+                           HorizontalAlignment="Center"/>
+                <Button Content="{materialIcons:MaterialIconTextExt Kind=CloseCircle, Text=Clear Field}"
+                        Command="{Binding Library.ClearSearchCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0"
+                        Padding="14,8"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        FontWeight="SemiBold"
+                        CornerRadius="8"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
